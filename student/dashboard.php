@@ -4,11 +4,11 @@
 <?php 
 // $basePath = 'http://192.168.29.47/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 
-$basePath = 'http://nayantarabyspacs.co.in'; 
+require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('http://nayantarabyspacs.co.in'); 
 
 // $path = "http://192.168.29.47:8085";
 // $path = "http://65.0.164.127:8000";
-$path = "http://nayantarabyspacs.co.in:8085";
+$path = nt_api('http://nayantarabyspacs.co.in:8085');
 
 ?>
 
@@ -147,40 +147,75 @@ async function getTimeSchedule(studentId) {
     <div class="page-content">
         <div class="container-fluid">
             <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="d-flex" style="justify-content: space-around;
-    border-radius: 50px;
-    width: 80%;
-    align-items: center;
-    margin: 20px 65px;
-    background-color: gold;">
-                            <h4>Available min</h4>
-                            <span id="availablemin" style="    background-color: black;
-    color: white;
-    height: 20px;">${availableMin}</span>
-                        </div>
-                        <table class="text-center">
-                            <thead>
-                                <tr>
-                                    <th>S. No</th>
-                                    <th>Parent Name</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="getparentstatus">
-                            </tbody>
-                        </table>
-                        <div class="header">
-                            <div class="row mt-3 mr-2 ml-2">
-                                <div class="col-md-6 text-left">
-                                    <h5>Call Schedule</h5>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="card mini-stats-wid">
+                        <div class="card-body">
+                            <div class="media">
+                                <div class="media-body">
+                                    <p class="text-muted font-weight-medium">Available Minutes</p>
+                                    <h4 class="mb-0" id="availablemin"></h4>
                                 </div>
-                                <div class="col-md-6 text-right">
+                                <div class="avatar-sm rounded-circle bg-primary align-self-center mini-stat-icon">
+                                    <span class="avatar-title rounded-circle bg-primary">
+                                        <i class="bx bx-timer font-size-24"></i>
+                                    </span>
                                 </div>
                             </div>
                         </div>
-                        <div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-xl-7">
+                    <div class="card">
+                        <div class="header">
+                            <div class="row">
+                                <div class="col-12 text-left">
+                                    <h5>Parents</h5>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>S. No</th>
+                                            <th>Parent Name</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="getparentstatus">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-5">
+                    <div class="card">
+                        <div class="header">
+                            <div class="row">
+                                <div class="col-12 text-left">
+                                    <h5>Camera Preview</h5>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <video id="videoElement" autoplay playsinline style="width:100%;background:#101828;aspect-ratio:16/9;"></video>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="header">
+                            <div class="row">
+                                <div class="col-12 text-left">
+                                    <h5>Call Schedule</h5>
+                                </div>
+                            </div>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
@@ -204,8 +239,6 @@ async function getTimeSchedule(studentId) {
             </div>
         </div>
     </div>
-
-    <video id="videoElement" autoplay playsinline></video>
 
     <?php include("../include/footer.php") ?>
     <?php include("../include/foot.php") ?>

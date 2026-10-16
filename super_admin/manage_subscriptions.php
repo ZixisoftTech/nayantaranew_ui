@@ -4,11 +4,11 @@
 <?php 
 // $basePath = 'http://localhost/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 
-$basePath = 'https://nayantarabyspacs.co.in'; 
+require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('https://nayantarabyspacs.co.in'); 
 
 // $path = "http://localhost:8085";
 // $path = "http://65.0.164.127:8000"; 
-$path = "https://nayantarabyspacs.co.in";
+$path = nt_api('https://nayantarabyspacs.co.in');
 
 ?>
 
@@ -202,7 +202,7 @@ async function deleteSubscription(id) {
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title mt-0" id="myLargeModalLabel">Create</h5>
+                    <h5 class="modal-title mt-0" id="myLargeModalLabel">Add subscription plan</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -215,7 +215,7 @@ async function deleteSubscription(id) {
                                 <select name="franchise_id" id="franchise_id" class="form-control"></select>
                             </div>
                             <div class="form-group col-md-6">
-                                <label>PLan Name</label>
+                                <label>Plan Name</label>
                                 <input name="plan_name" id="plan_name" type="text" class="form-control">
                             </div>
                             <div class="form-group col-md-6">
@@ -240,7 +240,7 @@ async function deleteSubscription(id) {
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title mt-0" id="myLargeModalLabel">Edit</h5>
+                    <h5 class="modal-title mt-0" id="myLargeModalLabel">Edit subscription plan</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>

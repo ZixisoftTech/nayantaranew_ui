@@ -4,11 +4,11 @@
 <?php 
 // $basePath = 'http://localhost/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 
-$basePath = 'https://nayantarabyspacs.co.in'; 
+require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('https://nayantarabyspacs.co.in'); 
 
 // $path = "http://localhost:8085";
 // $path = "http://65.0.164.127:8000";
-$path = "https://nayantarabyspacs.co.in";
+$path = nt_api('https://nayantarabyspacs.co.in');
 
 ?>
 
@@ -69,15 +69,13 @@ async function getPlan(id) {
                                 <div class="col-md-6 text-left">
                                     <h5>Assign Plan</h5>
                                 </div>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="col-md-2" style="display:flex">
-                                <div style="align-self: center;">
+                                <div class="col-md-6 text-right">
                                     <a href="javascript:void(0);" data-toggle="modal" data-target=".assign"
                                         class="btn btn-primary assign-btn">Assign Plan</a>
                                 </div>
                             </div>
+                        </div>
+                        <div class="card-body">
                             <div class="row">
                                 <div class="form-group col-md-4">
                                     <label>Select Franchise</label>
@@ -179,6 +177,7 @@ async function getPlan(id) {
         ajax: {
             url: `<?= $path ?>/api/get-studentbyfranchise`,
             data: function(d) {
+                d.franchise_id = $('#franchise_id').val()
                 d.id = $('#department_id').val()
             },
             dataType: "JSON",

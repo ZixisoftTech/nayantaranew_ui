@@ -4,11 +4,11 @@
 <?php 
 // $basePath = 'http://localhost/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 
-$basePath = 'https://nayantarabyspacs.co.in'; 
+require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('https://nayantarabyspacs.co.in'); 
 
 // $path = "http://localhost:8085";
 // $path = "http://65.0.164.127:8000";
-$path = "https://nayantarabyspacs.co.in";
+$path = nt_api('https://nayantarabyspacs.co.in');
 
 ?>
 
@@ -57,27 +57,27 @@ async function getPlan(id) {
                         <div class="header">
                             <div class="row mt-3 mr-2 ml-2">
                                 <div class="col-md-6 text-left">
-                                    <h5>Assign Plan</h5>
+                                    <h5>Assign Plan by Department</h5>
                                 </div>
                             </div>
                         </div>
                         <form method="POST" action="<?= $path ?>/api/planassign-departmentid" id="add_plan">
-                            <div class="row">
+                            <div class="row card-body pb-0 mx-0">
                                 <div class="form-group col-md-4">
                                     <label>Select Franchise</label>
                                     <select class="form-control" id="franchise_id" name="franchise_id"
                                         onchange="getDepartment(this)"></select>
                                 </div>
-                                <div class="form-group col-md-3">
+                                <div class="form-group col-md-4">
                                     <label>Select Department</label>
                                     <select class="form-control" id="department_id" name="department_id"></select>
                                 </div>
-                                <div class="form-group col-md-3">
+                                <div class="form-group col-md-4">
                                     <label>Select Plan</label>
                                     <select class="form-control" id="plan_id" name="plan_id"></select>
                                 </div>
                             </div>
-                            <div class="modal-footer">
+                            <div class="modal-footer nt-card-footer">
                                 <div style="align-self: center;">
                                      <button type="submit" id="add" class="btn btn-primary create-btn">Submit
                                           <div class="loader" id="loader"></div>

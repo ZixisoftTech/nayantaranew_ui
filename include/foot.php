@@ -18,11 +18,8 @@
     <script src="<?= $basePath ?>/assets/admin/libs/datatables.net-buttons/js/buttons.html5.min.js"></script>
     <script src="<?= $basePath ?>/assets/admin/libs/datatables.net-buttons/js/buttons.print.min.js"></script>
     <script src="<?= $basePath ?>/assets/admin/libs/datatables.net-buttons/js/buttons.colVis.min.js"></script>
-    <!-- Responsive examples -->
-    <!-- <script src="<?= $basePath ?>/assets/admin/libs/datatables.net-responsive/js/dataTables.responsive.min.js"></script> -->
-<?php if(!isset($isLoginPage)): ?>
-    <script src="<?= $basePath ?>/assets/admin/libs/datatables.net-responsive-bs4/js/responsive.bootstrap4.min.js"></script>
-<?php endif; ?>
+    <!-- DataTables Responsive is not used: wide tables scroll horizontally inside .table-responsive.
+         (responsive.bootstrap4.min.js was removed — it threw without the core dataTables.responsive.min.js.) -->
 
     <!-- Datatable init js -->
     <script src="<?= $basePath ?>/assets/admin/js/pages/datatables.init.js"></script>    
@@ -35,6 +32,9 @@
     <script src="<?= $basePath ?>/assets/admin/libs/sweetalert2/sweetalert2.min.js"></script>
     <script src="<?= $basePath ?>/assets/admin/js/pages/sweet-alerts.init.js"></script>
     <script src="<?= $basePath ?>/assets/admin/js/app.js"></script>
+    <script src="<?= $basePath ?>/assets/admin/js/nt-table.js?v=9"></script>
+    <script src="<?= $basePath ?>/assets/admin/js/nt-lookup.js?v=5"></script>
+    <script src="<?= $basePath ?>/assets/admin/js/nt-forms.js?v=9"></script>
 
 
   

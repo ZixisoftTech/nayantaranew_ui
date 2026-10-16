@@ -4,11 +4,11 @@
 <?php 
 // $basePath = 'http://localhost/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 
-$basePath = 'https://nayantarabyspacs.co.in'; 
+require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('https://nayantarabyspacs.co.in'); 
 
 // $path = "http://localhost:8085";
 // $path = "http://65.0.164.127:8000";
-$path = "https://nayantarabyspacs.co.in";
+$path = nt_api('https://nayantarabyspacs.co.in');
 
 ?>
 <script type="text/javascript">
@@ -80,20 +80,20 @@ async function getTotalDepartment(id) {
             <div class="row">
                 <div class="col-xl-12">
                     <div class="row">
-                        <div class="col-md-3">
+                        <div class="col-sm-6 col-xl-3">
                             <div class="card mini-stats-wid">
                                 <a href="<?= $basePath ?>/franchise/manage_students.php">
                                     <div class="card-body">
                                         <div class="media">
                                             <div class="media-body">
-                                                <p class="text-muted font-weight-medium">Total Active</p>
+                                                <p class="text-muted font-weight-medium">Active Students</p>
                                                 <h4 class="mb-0" id="active"></h4>
                                             </div>
 
                                             <div
                                                 class="mini-stat-icon avatar-sm rounded-circle bg-primary align-self-center">
                                                 <span class="avatar-title">
-                                                    <i class="bx bx-copy-alt font-size-24"></i>
+                                                    <i class="bx bx-user-check font-size-24"></i>
                                                 </span>
                                             </div>
                                         </div>
@@ -101,20 +101,20 @@ async function getTotalDepartment(id) {
                                 </a>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-sm-6 col-xl-3">
                             <div class="card mini-stats-wid">
                                 <a href="<?= $basePath ?>/franchise/manage_students.php">
                                     <div class="card-body">
                                         <div class="media">
                                             <div class="media-body">
-                                                <p class="credit-min font-weight-medium">Total Inactive</p>
+                                                <p class="text-muted font-weight-medium">Inactive Students</p>
                                                 <h4 class="mb-0" id="inactive"></h4>
                                             </div>
 
                                             <div
                                                 class="avatar-sm rounded-circle bg-primary align-self-center mini-stat-icon">
                                                 <span class="avatar-title rounded-circle bg-primary">
-                                                    <i class="bx bx-archive-in font-size-24"></i>
+                                                    <i class="bx bx-user-x font-size-24"></i>
                                                 </span>
                                             </div>
                                         </div>
@@ -122,20 +122,20 @@ async function getTotalDepartment(id) {
                                 </a>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-sm-6 col-xl-3">
                             <div class="card mini-stats-wid">
                                 <a href="<?= $basePath ?>/franchise/call_history.php">
                                     <div class="card-body">
                                         <div class="media">
                                             <div class="media-body">
-                                                <p class="text-muted font-weight-medium">Total Call Made</p>
+                                                <p class="text-muted font-weight-medium">Calls Made</p>
                                                 <h4 class="mb-0" id="call_made"></h4>
                                             </div>
 
                                             <div
                                                 class="avatar-sm rounded-circle bg-primary align-self-center mini-stat-icon">
                                                 <span class="avatar-title rounded-circle bg-primary">
-                                                    <i class="bx bx-purchase-tag-alt font-size-24"></i>
+                                                    <i class="bx bx-phone-call font-size-24"></i>
                                                 </span>
                                             </div>
                                         </div>
@@ -143,57 +143,57 @@ async function getTotalDepartment(id) {
                                 </a>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-sm-6 col-xl-3">
                             <div class="card mini-stats-wid">
                                 <div class="card-body">
                                     <div class="media">
                                         <div class="media-body">
-                                            <p class="text-muted font-weight-medium">Total Used Balance</p>
+                                            <p class="text-muted font-weight-medium">Used Balance</p>
                                             <h4 class="mb-0" id="used_balance"></h4>
                                         </div>
 
                                         <div
                                             class="avatar-sm rounded-circle bg-primary align-self-center mini-stat-icon">
                                             <span class="avatar-title rounded-circle bg-primary">
-                                                <i class="bx bx-purchase-tag-alt font-size-24"></i>
+                                                <i class="bx bx-time-five font-size-24"></i>
                                             </span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-sm-6 col-xl-3">
                             <div class="card mini-stats-wid">
                                 <div class="card-body">
                                     <div class="media">
                                         <div class="media-body">
-                                            <p class="text-muted font-weight-medium">Total Available Balance</p>
+                                            <p class="text-muted font-weight-medium">Available Balance</p>
                                             <h4 class="mb-0" id="available_balance"></h4>
                                         </div>
 
                                         <div
                                             class="avatar-sm rounded-circle bg-primary align-self-center mini-stat-icon">
                                             <span class="avatar-title rounded-circle bg-primary">
-                                                <i class="bx bx-purchase-tag-alt font-size-24"></i>
+                                                <i class="bx bx-wallet font-size-24"></i>
                                             </span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-sm-6 col-xl-3">
                             <div class="card mini-stats-wid">
                                 <div class="card-body">
                                     <div class="media">
                                         <div class="media-body">
-                                            <p class="text-muted font-weight-medium">Total Department</p>
+                                            <p class="text-muted font-weight-medium">Departments</p>
                                             <h4 class="mb-0" id="department"></h4>
                                         </div>
 
                                         <div
                                             class="avatar-sm rounded-circle bg-primary align-self-center mini-stat-icon">
                                             <span class="avatar-title rounded-circle bg-primary">
-                                                <i class="bx bx-purchase-tag-alt font-size-24"></i>
+                                                <i class="bx bx-sitemap font-size-24"></i>
                                             </span>
                                         </div>
                                     </div>
@@ -203,6 +203,7 @@ async function getTotalDepartment(id) {
                     </div>
                 </div>
             </div>
+            <?php $ntChartsPortal = 'franchise'; include("../include/dashboard_charts.php"); ?>
         </div>
     </div>
 

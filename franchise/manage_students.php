@@ -4,11 +4,11 @@
 <?php
 // $basePath = 'http://localhost/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 
-$basePath = 'https://nayantarabyspacs.co.in'; 
+require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('https://nayantarabyspacs.co.in'); 
 
 // $path = "http://localhost:8085";
 // $path = "http://65.0.164.127:8000"; 
-$path = "https://nayantarabyspacs.co.in";
+$path = nt_api('https://nayantarabyspacs.co.in');
 ?>
 
 <script type="text/javascript">
@@ -497,88 +497,76 @@ $(document).on('click', '#close', function() {
                             </div>
                         </div>
                         <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6 form-group">
-                                    <h2>Bulk Upload Students<a href="<?= $basePath ?>/assets/student.csv"
-                                            download="students.csv" class="btn btn-warning" target="_blank"
-                                            style="margin: 0px 10px">Download Sample
-                                            Excel</a>
-                                    </h2>
-                                </div>
-                                <div class="col-md-12">
-                                    <form action="<?= $path ?>/import-csv" id="uploadfile" enctype="multipart/form-data"
-                                        method="post">
-                                        <div class="row">
-                                            <!-- <div class="col-md-4 form-group">
-                                                <label>Select Department</lable>
-                                                    <select class="form-control col-md-6" style="width: 44rem;"
-                                                        id="department" name="department" required="">
-                                                    </select>
-                                            </div> -->
+                            <div class="row nt-tiles">
+                                <div class="col-lg-6">
+                                    <div class="nt-tile">
+                                        <div class="nt-tile-head">
+                                            <span class="nt-tile-icon"><i class="bx bx-upload"></i></span>
+                                            <div>
+                                                <h6>Bulk upload students</h6>
+                                                <p>Import many students at once from a CSV file.</p>
+                                            </div>
+                                            <a href="<?= $basePath ?>/assets/student.csv" download="students.csv"
+                                                class="btn btn-light btn-sm" target="_blank"><i class="bx bx-download"></i> Sample CSV</a>
+                                        </div>
+                                        <form action="<?= $path ?>/import-csv" id="uploadfile" enctype="multipart/form-data"
+                                            method="post" class="nt-tile-form">
                                             <input type="hidden" id="franch_id" name="franch_id" class="form-control" />
-                                            <div class="col-md-4 form-group">
-                                                <label>Choose CSV file</lable>
-                                                    <input type="file" id="import-csv" name="import-csv" accept=".csv"
-                                                        required="" class="form-control" />
-                                            </div>
-                                            <div class="col-md-4 form-group">
-                                                <button type="submit" class="btn btn-success" value="Store File"
-                                                    id="submit" name="submit" class="form-control"
-                                                    style="margin: 15px">Import
-                                                    Students</button>
-                                            </div>
-                                        </div>
-                                    </form>
+                                            <input type="file" id="import-csv" name="import-csv" accept=".csv"
+                                                required="" class="form-control" aria-label="Students CSV file" />
+                                            <button type="submit" class="btn btn-primary" value="Store File"
+                                                id="submit" name="submit">Import students</button>
+                                        </form>
+                                    </div>
                                 </div>
-                                <div class="col-md-12">
-                                    <h2>Bulk Upload Parents <a href="<?= $basePath ?>/assets/parents.csv"
-                                            download="parents.csv" class="btn btn-warning" target="_blank">
-                                            Download Sample Excel</a>
-                                    </h2>
-                                    <form action="<?= $path ?>/imports-csv" id="uploadsfile"
-                                        enctype="multipart/form-data" method="post">
-                                        <div class="row">
+                                <div class="col-lg-6">
+                                    <div class="nt-tile">
+                                        <div class="nt-tile-head">
+                                            <span class="nt-tile-icon"><i class="bx bx-upload"></i></span>
+                                            <div>
+                                                <h6>Bulk upload parents</h6>
+                                                <p>Import parent contacts from a CSV file.</p>
+                                            </div>
+                                            <a href="<?= $basePath ?>/assets/parents.csv" download="parents.csv"
+                                                class="btn btn-light btn-sm" target="_blank"><i class="bx bx-download"></i> Sample CSV</a>
+                                        </div>
+                                        <form action="<?= $path ?>/imports-csv" id="uploadsfile"
+                                            enctype="multipart/form-data" method="post" class="nt-tile-form">
                                             <input type="hidden" id="franchis_id" name="franchis_id" />
-                                            <div class="col-md-4 form-group">
-                                                <label>Choose CSV file</label>
-                                                <input type="file" id="imports-csv" name="imports-csv" accept=".csv"
-                                                    required="" class="form-control" />
-                                            </div>
-                                            <div class="col-md-4 form-group">
-                                                <button type="submit" class="btn btn-success" value="Store File"
-                                                    id="inport" name="import" style="margin: 25px">Import
-                                                    Parents</button>
-                                            </div>
-                                        </div>
-                                    </form>
+                                            <input type="file" id="imports-csv" name="imports-csv" accept=".csv"
+                                                required="" class="form-control" aria-label="Parents CSV file" />
+                                            <button type="submit" class="btn btn-primary" value="Store File"
+                                                id="inport" name="import">Import parents</button>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="d-flex flex-column" style="align-items: center">
-                                <label>Department Filter</label>
-                                <select class="form-control col-md-4 filter-handle" id="departmentName"
-                                    name="departmentName"></select>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-4 form-group">
-                                    <label>Bulk Department Update</lable>
-                                        <select class="form-control col-md-6" style="width: 44rem;" id="department"
-                                            name="department" onchange="bulkDepartmentUpdate(this)">
-                                        </select>
+                            <div class="nt-toolbar">
+                                <div class="nt-toolbar-field">
+                                    <label for="departmentName">Filter by department</label>
+                                    <select class="form-control filter-handle" id="departmentName"
+                                        name="departmentName"></select>
                                 </div>
-                                <div class="col-md-4 form-group">
-                                    <label>Bulk Delete</lable>
-                                        <button type="submit" class="btn btn-danger bulkdelete" value="Store File"
-                                            id="inport" name="import" style="margin: 25px">Delete</button>
+                                <div class="nt-toolbar-divider"></div>
+                                <div class="nt-toolbar-field">
+                                    <label for="department">Move selected to department</label>
+                                    <select class="form-control" id="department"
+                                        name="department" onchange="bulkDepartmentUpdate(this)">
+                                    </select>
                                 </div>
-                                <div class="col-md-4 form-group">
-                                    <label>Bulk Status Update</lable>
-                                        <select class="form-control col-md-6" style="width: 44rem;"
-                                            id="bulk_statusupdate" name="bulk_statusupdate"
-                                            onchange="bulkStatusUpdate(this)">
-                                            <option value="">---select---</option>
-                                            <option value="1">Active</option>
-                                            <option value="0">Inactive</option>
-                                        </select>
+                                <div class="nt-toolbar-field">
+                                    <label for="bulk_statusupdate">Set status of selected</label>
+                                    <select class="form-control"
+                                        id="bulk_statusupdate" name="bulk_statusupdate"
+                                        onchange="bulkStatusUpdate(this)">
+                                        <option value="">Choose status…</option>
+                                        <option value="1">Active</option>
+                                        <option value="0">Inactive</option>
+                                    </select>
+                                </div>
+                                <div class="nt-toolbar-action">
+                                    <button type="submit" class="btn btn-outline-danger bulkdelete" value="Store File"
+                                        id="inport" name="import"><i class="bx bx-trash-alt"></i> Delete selected</button>
                                 </div>
                             </div>
                             <div class="table-responsive">
@@ -620,7 +608,7 @@ $(document).on('click', '#close', function() {
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title mt-0" id="myLargeModalLabel">Create</h5>
+                    <h5 class="modal-title mt-0" id="myLargeModalLabel">Add student</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -878,7 +866,7 @@ $(document).on('click', '#close', function() {
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title mt-0" id="myLargeModalLabel">Edit</h5>
+                    <h5 class="modal-title mt-0" id="myLargeModalLabel">Edit student</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>

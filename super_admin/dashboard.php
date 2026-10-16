@@ -4,11 +4,11 @@
 <?php 
 // $basePath = 'http://localhost/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 
-$basePath = 'https://nayantarabyspacs.co.in'; 
+require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('https://nayantarabyspacs.co.in'); 
 
 // $path = "http://localhost:8085";
 // $path = "http://65.0.164.127:8000";
-$path = "https://nayantarabyspacs.co.in";
+$path = nt_api('https://nayantarabyspacs.co.in');
 
 ?>
 
@@ -24,20 +24,20 @@ if (!localStorage.getItem("admintoken")) { //HERE IS NOT WORKING
             <div class="row">
                 <div class="col-xl-12">
                     <div class="row">
-                        <div class="col-md-3">
+                        <div class="col-sm-6 col-xl-3">
                             <div class="card mini-stats-wid">
                                 <a href="<?= $basePath ?>/super_admin/manage_franchise.php">
                                     <div class="card-body">
                                         <div class="media">
                                             <div class="media-body">
-                                                <p class="text-muted font-weight-medium">Franchise</p>
+                                                <p class="text-muted font-weight-medium">Franchises</p>
                                                 <h4 class="mb-0" id="getFranchise"></h4>
                                             </div>
 
                                             <div
                                                 class="mini-stat-icon avatar-sm rounded-circle bg-primary align-self-center">
                                                 <span class="avatar-title">
-                                                    <i class="bx bx-copy-alt font-size-24"></i>
+                                                    <i class="bx bx-buildings font-size-24"></i>
                                                 </span>
                                             </div>
                                         </div>
@@ -45,20 +45,20 @@ if (!localStorage.getItem("admintoken")) { //HERE IS NOT WORKING
                                 </a>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-sm-6 col-xl-3">
                             <div class="card mini-stats-wid">
                                 <a href="<?= $basePath ?>/super_admin/student_summary.php">
                                     <div class="card-body">
                                         <div class="media">
                                             <div class="media-body">
-                                                <p class="credit-min font-weight-medium">Total Available Minutes</p>
+                                                <p class="text-muted font-weight-medium">Available Minutes</p>
                                                 <h4 class="mb-0" id="available_min"></h4>
                                             </div>
 
                                             <div
                                                 class="avatar-sm rounded-circle bg-primary align-self-center mini-stat-icon">
                                                 <span class="avatar-title rounded-circle bg-primary">
-                                                    <i class="bx bx-archive-in font-size-24"></i>
+                                                    <i class="bx bx-timer font-size-24"></i>
                                                 </span>
                                             </div>
                                         </div>
@@ -66,20 +66,20 @@ if (!localStorage.getItem("admintoken")) { //HERE IS NOT WORKING
                                 </a>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-sm-6 col-xl-3">
                             <div class="card mini-stats-wid">
                                 <a href="<?= $basePath ?>/super_admin/student_summary.php">
                                     <div class="card-body">
                                         <div class="media">
                                             <div class="media-body">
-                                                <p class="text-muted font-weight-medium">Total Usage Minutes</p>
+                                                <p class="text-muted font-weight-medium">Minutes Used</p>
                                                 <h4 class="mb-0" id="usage_min"></h4>
                                             </div>
 
                                             <div
                                                 class="avatar-sm rounded-circle bg-primary align-self-center mini-stat-icon">
                                                 <span class="avatar-title rounded-circle bg-primary">
-                                                    <i class="bx bx-purchase-tag-alt font-size-24"></i>
+                                                    <i class="bx bx-time-five font-size-24"></i>
                                                 </span>
                                             </div>
                                         </div>
@@ -87,40 +87,39 @@ if (!localStorage.getItem("admintoken")) { //HERE IS NOT WORKING
                                 </a>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-sm-6 col-xl-3">
                             <div class="card mini-stats-wid">
                                 <div class="card-body">
                                     <div class="media">
                                         <div class="media-body">
-                                            <p class="text-muted font-weight-medium">Total number of active users</p>
+                                            <p class="text-muted font-weight-medium">Active Users</p>
                                             <h4 class="mb-0" id="active_student"></h4>
                                         </div>
 
                                         <div
                                             class="avatar-sm rounded-circle bg-primary align-self-center mini-stat-icon">
                                             <span class="avatar-title rounded-circle bg-primary">
-                                                <i class="bx bx-purchase-tag-alt font-size-24"></i>
+                                                <i class="bx bx-user-check font-size-24"></i>
                                             </span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-sm-6 col-xl-3">
                             <div class="card mini-stats-wid">
                                 <a href="<?= $basePath ?>/super_admin/manage_department.php">
                                     <div class="card-body">
                                         <div class="media">
                                             <div class="media-body">
-                                                <p class="text-muted font-weight-medium">Total number of unique Devices
-                                                </p>
+                                                <p class="text-muted font-weight-medium">Unique Devices</p>
                                                 <h4 class="mb-0" id="unique_device"></h4>
                                             </div>
 
                                             <div
                                                 class="avatar-sm rounded-circle bg-primary align-self-center mini-stat-icon">
                                                 <span class="avatar-title rounded-circle bg-primary">
-                                                    <i class="bx bx-purchase-tag-alt font-size-24"></i>
+                                                    <i class="bx bx-devices font-size-24"></i>
                                                 </span>
                                             </div>
                                         </div>
@@ -128,20 +127,19 @@ if (!localStorage.getItem("admintoken")) { //HERE IS NOT WORKING
                                 </a>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-sm-6 col-xl-3">
                             <div class="card mini-stats-wid">
                                 <div class="card-body">
                                     <div class="media">
                                         <div class="media-body">
-                                            <p class="text-muted font-weight-medium">Current Time Of Server
-                                            </p>
+                                            <p class="text-muted font-weight-medium">Server Time (IST)</p>
                                             <h4 class="mb-0" id="current_time"></h4>
                                         </div>
 
                                         <div
                                             class="avatar-sm rounded-circle bg-primary align-self-center mini-stat-icon">
                                             <span class="avatar-title rounded-circle bg-primary">
-                                                <i class="bx bx-purchase-tag-alt font-size-24"></i>
+                                                <i class="bx bx-time font-size-24"></i>
                                             </span>
                                         </div>
                                     </div>
@@ -151,6 +149,7 @@ if (!localStorage.getItem("admintoken")) { //HERE IS NOT WORKING
                     </div>
                 </div>
             </div>
+            <?php $ntChartsPortal = 'admin'; include("../include/dashboard_charts.php"); ?>
         </div>
     </div>
 
@@ -251,8 +250,9 @@ if (!localStorage.getItem("admintoken")) { //HERE IS NOT WORKING
         const hours = parseInt(hourString);
         const minutes = parseInt(minuteString);
         const second = parseInt(secondString);
-        let currentTime = hours + ':' + ('0' + minutes).slice(-2) + ":" + second;
-        $('#current_time').html(currentTime);
+        let currentTime = hours + ':' + ('0' + minutes).slice(-2) + ':' + ('0' + second).slice(-2);
+        document.getElementById('current_time').textContent = currentTime;
     }
-    getCurrentTime()
+    getCurrentTime();
+    setInterval(getCurrentTime, 1000); // live clock
     </script>

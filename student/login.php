@@ -2,11 +2,11 @@
 
 // $basePath = 'http://192.168.29.47/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 
-$basePath = 'http://nayantarabyspacs.co.in'; 
+require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('http://nayantarabyspacs.co.in'); 
 
 // $path = "http://192.168.29.47:8085";
 // $path = "http://65.0.164.127:8000"; 
-$path = "http://nayantarabyspacs.co.in:8085";
+$path = nt_api('http://nayantarabyspacs.co.in:8085');
 ?>
 
 <script>
@@ -23,93 +23,64 @@ async function getFranchise() {
 getFranchise()
 </script>
 
-<body class="bg1" data-sidebar="dark">
-    <div class="account-pages my-4">
-        <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-md-8 col-lg-6 col-xl-5">
-                    <div class="card overflow-hidden">
-                        <div class="bg-color">
-                            <div class="row">
-                                <div class="col-7">
-                                    <div class="p-4">
-                                        <h5 style="color:white">Welcome Back !</h5>
-                                        <p style="color:white">Sign in to continue to Nayan tara.</p>
-                                    </div>
-                                </div>
-                                <div class="col-5 align-self-end">
-                                    <img src="<?= $basePath ?>/assets/admin/images/profile-img.png" alt=""
-                                        class="img-fluid">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-body pt-0">
-                            <!-- <div>
-                            <a href="index-2.html">
-                                <div class="avatar-md profile-user-wid mb-4">
-                                    <span class="avatar-title rounded-circle bg-light">
-                                        <img src="../assets/admin/images/logo.svg" alt="" class="rounded-circle"
-                                            height="34">
-                                    </span>
-                                </div>
-                            </a>
-                        </div> -->
-                            <div class="p-2">
-                                <form class="form-horizontal" id="studentlogin" method="POST"
-                                    action="<?= $path ?>/api/student/login">
-
-                                    <div class="form-group">
-                                        <label>School Name</label>
-                                        <select name="franchise_id" id="franchise_id" class="form-control">
-                                        </select>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="username">Roll No</label>
-                                        <input type="text" class="form-control" id="roll_no" name="roll_no"
-                                            placeholder="Enter Roll No">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="userpassword">Password</label>
-                                        <input type="password" name="password" id="password" class="form-control"
-                                            placeholder="Enter Password">
-                                        <span class="toggle-password text-right"
-                                            onclick="togglePasswordVisibilitys()"><i class="fa fa-eye"
-                                                style="position: absolute;right: 20px;margin-top: -25px;cursor: pointer;color: black;font-size: 10px;"></i></span>
-                                    </div>
-                                    <script type="text/javascript">
-                                    function togglePasswordVisibilitys() {
-                                        var passwordInput = document.getElementById("password");
-                                        var togglePassword = document.querySelector(".toggle-password");
-
-                                        if (passwordInput.type === "password") {
-                                            passwordInput.type = "text";
-                                            togglePassword.innerHTML =
-                                                '<i class="fa fa-eye-slash" style="position: absolute;right: 20px;margin-top: -25px;cursor: pointer;color: black;font-size: 10px;"></i>';
-                                        } else {
-                                            passwordInput.type = "password";
-                                            togglePassword.innerHTML =
-                                                '<i class="fa fa-eye" style="position: absolute;right: 20px;margin-top: -25px;cursor: pointer;color: black;font-size: 10px;"></i>';
-                                        }
-                                    }
-                                    </script>
-
-                                    <div class="mt-3 text-center">
-                                        <button class="login-btn" id="Save" type="submit">Login</button>
-                                    </div>
-
-                                    <!-- <div class="mt-4 text-center">
-                                        <a href="forget.php" class="text-muted"><i class="mdi mdi-lock mr-1"></i> Forgot
-                                            your password?</a>
-                                    </div> -->
-                                </form>
-                            </div>
-                        </div>
+<body class="nt-auth-body">
+    <div class="nt-auth">
+        <aside class="nt-auth-aside">
+            <img src="<?= $basePath ?>/assets/admin/images/nayan_logo.png" alt="Nayan Tara by SPACS" class="nt-auth-logo">
+            <div class="nt-auth-pitch">
+                <h2>One place to run every Nayan Tara centre.</h2>
+                <p>Manage franchises, students, plans and calls with real-time reports, all from a single dashboard.</p>
+                <ul class="nt-auth-points">
+                    <li><i class="bx bx-check-circle"></i> Live call and usage tracking</li>
+                    <li><i class="bx bx-check-circle"></i> Plans, subscriptions and transactions</li>
+                    <li><i class="bx bx-check-circle"></i> Export-ready reports</li>
+                </ul>
+            </div>
+            <div class="nt-auth-copy">&copy; <?= date('Y') ?> Nayan Tara by SPACS</div>
+        </aside>
+        <main class="nt-auth-main">
+            <div class="nt-auth-card">
+                <span class="nt-auth-badge"><i class="bx bx-user"></i>Student Portal</span>
+                <h1>Welcome back</h1>
+                <p class="nt-auth-sub">Sign in with your school and roll number.</p>
+                <form class="form-horizontal" id="studentlogin" method="POST" action="<?= $path ?>/api/student/login" novalidate>
+                <div class="form-group">
+                    <label>School name</label>
+                    <div class="nt-input-icon">
+                        <i class="bx bx-buildings"></i>
+                        <select name="franchise_id" id="franchise_id" class="form-control"></select>
                     </div>
                 </div>
+                <div class="form-group">
+                    <label>Roll number</label>
+                    <div class="nt-input-icon">
+                        <i class="bx bx-id-card"></i>
+                        <input type="text" class="form-control" id="roll_no" name="roll_no" placeholder="Enter your roll number">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="nt-input-icon">
+                        <i class="bx bx-lock-alt"></i>
+                        <input type="password" name="password" id="password" class="form-control" placeholder="Enter your password" autocomplete="current-password">
+                        <button type="button" class="nt-pass-toggle toggle-password" onclick="togglePasswordVisibilitys()" aria-label="Show password"><i class="bx bx-show"></i></button>
+                    </div>
+                </div>
+                <script type="text/javascript">
+                function togglePasswordVisibilitys() {
+                    var passwordInput = document.getElementById("password");
+                    var toggle = document.querySelector(".toggle-password");
+                    var show = passwordInput.type === "password";
+                    passwordInput.type = show ? "text" : "password";
+                    toggle.innerHTML = show ? '<i class="bx bx-hide"></i>' : '<i class="bx bx-show"></i>';
+                    toggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+                }
+                </script>
+                <button class="login-btn" id="Save" type="submit">Sign in <i class="bx bx-right-arrow-alt"></i></button>
+                </form>
+                <div class="nt-auth-switch">Other portals: <a href="<?= $basePath ?>/">Admin login</a><a href="<?= $basePath ?>/franchise/login.php">Franchise login</a></div>
             </div>
-        </div>
+        </main>
     </div>
 
     <?php include("../include/foot.php") ?>

@@ -4,11 +4,11 @@
 <?php
 // $basePath = 'http://localhost/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 
-$basePath = 'https://nayantarabyspacs.co.in'; 
+require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('https://nayantarabyspacs.co.in'); 
 
 // $path = "http://localhost:8085";
 // $path = "http://65.0.164.127:8000"; 
-$path = "https://nayantarabyspacs.co.in";
+$path = nt_api('https://nayantarabyspacs.co.in');
 
 ?>
 
@@ -19,31 +19,23 @@ $path = "https://nayantarabyspacs.co.in";
                 <div class="col-12">
                     <div class="card">
                         <div class="header">
-                            <div class="col mt-3 mr-2 ml-2">
-                                <div class="col-md-6 text-left">
+                            <div class="row">
+                                <div class="col-12 text-left">
                                     <h5>Parent Login Message</h5>
                                 </div>
-                                <div class="col-md-6 text-right">
-                                    <!-- <a href="javascript:void(0);" data-toggle="modal" data-target=".add"
-                                        class="btn btn-primary create-btn">Create</a> -->
-                                    <form action="<?= $path ?>/api/update-message" method="POST" id="createform">
-                                        <div class="row">
-                                            <input type="hidden" id="id" , name="id">
-                                            <div class="form-group col-md-10">
-                                                <label>Parent Login Message</label>
-                                                <input type="text" placeholder="Enter ..." class="form-control"
-                                                    id="message" , name="message">
-                                            </div>
-                                            <div class="col-md-2" style="display:flex">
-                                                <div style="align-self: center;">
-                                                    <button type="submit" id="submit"
-                                                        class="btn btn-primary create-btn">Submit</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </form>
-                                </div>
                             </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted mb-3">This message is shown to parents when they sign in to the app.</p>
+                            <form action="<?= $path ?>/api/update-message" method="POST" id="createform">
+                                <input type="hidden" id="id" name="id">
+                                <div class="form-group">
+                                    <label for="message">Message</label>
+                                    <input type="text" placeholder="Enter the message parents will see" class="form-control"
+                                        id="message" name="message">
+                                </div>
+                                <button type="submit" id="submit" class="btn btn-primary create-btn">Save message</button>
+                            </form>
                         </div>
                     </div>
                 </div>

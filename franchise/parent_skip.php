@@ -4,11 +4,11 @@
 <?php 
 // $basePath = 'http://localhost/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 
-$basePath = 'https://nayantarabyspacs.co.in'; 
+require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('https://nayantarabyspacs.co.in'); 
 
 // $path = "http://localhost:8085";
 // $path = "http://65.0.164.127:8000"; 
-$path = "https://nayantarabyspacs.co.in";
+$path = nt_api('https://nayantarabyspacs.co.in');
 
 ?>
 
@@ -214,11 +214,6 @@ async function deleteParentSkip(id) {
 <body class="bg2" data-sidebar="dark">
     <div class="page-content">
         <div class="container-fluid">
-            <div class="d-flex flex-column" style="align-items: center">
-                <label>Bulk Delete</lable>
-                    <button type="submit" class="form-control col-md-4 btn btn-danger bulkdelete" value="Store File" id="inport" name="import"
-                        style="margin: 25px">Delete</button>
-            </div>
             <div class="row">
                 <div class="col-12">
                     <div class="card">
@@ -228,6 +223,7 @@ async function deleteParentSkip(id) {
                                     <h5>Parent Skip Data</h5>
                                 </div>
                                 <div class="col-md-6 text-right">
+                                    <button type="button" class="btn btn-outline-danger bulkdelete" value="Store File" id="inport" name="import"><i class="bx bx-trash-alt"></i> Delete selected</button>
                                     <!-- <a href="javascript:void(0);" data-toggle="modal" data-target=".add"
                                         onclick="getStateName()" class="btn btn-primary create-btn">Create</a> -->
                                 </div>
@@ -325,7 +321,7 @@ async function deleteParentSkip(id) {
                                 <input type="number" min="1" name="pincode" id="pincode" class="form-control">
                             </div>
                             <div class="form-group col-md-6">
-                                <label>Jitsi Romm Url</label>
+                                <label>Jitsi Room URL</label>
                                 <input type="text" name="room_id" id="room_id" class="form-control">
                             </div>
                             <div class="form-group col-md-6">
@@ -398,11 +394,11 @@ async function deleteParentSkip(id) {
                                 <input type="number" name="editpincode" min="1" id="editpincode" class="form-control">
                             </div>
                             <div class="form-group col-md-6">
-                                <label>Jitsi Romm Url</label>
+                                <label>Jitsi Room URL</label>
                                 <input type="text" name="editjitsi_url" id="editjitsi_url" class="form-control">
                             </div>
                             <div class="form-group col-md-6">
-                                <label>By Paln Permission</label>
+                                <label>By Plan Permission</label>
                                 <select name="editby_plan_permision" id="editby_plan_permision" class="form-control">
                                     <option value='' selected disabled>---Select---</option>
                                     <option value="1">Yes</option>

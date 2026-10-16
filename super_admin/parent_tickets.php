@@ -4,11 +4,11 @@
 <?php 
 // $basePath = 'http://localhost/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 
-$basePath = 'https://nayantarabyspacs.co.in'; 
+require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('https://nayantarabyspacs.co.in'); 
 
 // $path = "http://localhost:8085";
 // $path = "http://65.0.164.127:8000"; 
-$path = "https://nayantarabyspacs.co.in";
+$path = nt_api('https://nayantarabyspacs.co.in');
 
 ?>
 
@@ -157,7 +157,7 @@ $(document).ready(function() {
                                 <input type="number" min="1" name="pincode" id="pincode" class="form-control">
                             </div>
                             <div class="form-group col-md-6">
-                                <label>Jitsi Romm Url</label>
+                                <label>Jitsi Room URL</label>
                                 <input type="text" name="room_id" id="room_id" class="form-control">
                             </div>
                             <div class="form-group col-md-6">
@@ -230,11 +230,11 @@ $(document).ready(function() {
                                 <input type="number" name="editpincode" min="1" id="editpincode" class="form-control">
                             </div>
                             <div class="form-group col-md-6">
-                                <label>Jitsi Romm Url</label>
+                                <label>Jitsi Room URL</label>
                                 <input type="text" name="editjitsi_url" id="editjitsi_url" class="form-control">
                             </div>
                             <div class="form-group col-md-6">
-                                <label>By Paln Permission</label>
+                                <label>By Plan Permission</label>
                                 <select name="editby_plan_permision" id="editby_plan_permision" class="form-control">
                                     <option value='' selected disabled>---Select---</option>
                                     <option value="1">Yes</option>

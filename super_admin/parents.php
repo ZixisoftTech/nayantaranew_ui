@@ -4,11 +4,11 @@
 <?php 
 // $basePath = 'http://localhost/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 
-$basePath = 'https://nayantarabyspacs.co.in'; 
+require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('https://nayantarabyspacs.co.in'); 
 
 // $path = "http://localhost:8085";
 // $path = "http://65.0.164.127:8000";
-$path = "https://nayantarabyspacs.co.in";
+$path = nt_api('https://nayantarabyspacs.co.in');
 
 ?>
 
@@ -115,6 +115,7 @@ getFranchise()
         ajax: {
             url: `<?= $path ?>/parent/getparent-studentid`,
             data: function(d) {
+                d.franchise_id = $('#franchise_id').val()
                 d.id = $('#student_id').val()
             },
             dataType: "JSON",

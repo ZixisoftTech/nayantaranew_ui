@@ -4,11 +4,11 @@
 <?php
 // $basePath = 'http://localhost/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 
-$basePath = 'https://nayantarabyspacs.co.in'; 
+require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('https://nayantarabyspacs.co.in'); 
 
 // $path = "http://localhost:8085";
 // $path = "http://65.0.164.127:8000"; 
-$path = "https://nayantarabyspacs.co.in";
+$path = nt_api('https://nayantarabyspacs.co.in');
 
 ?>
 
@@ -113,7 +113,7 @@ $(document).ready(function() {
                     <div class="modal-body">
                         <div class="row">
                             <div class="form-group col-md-12">
-                                <label>Frachise Name</label>
+                                <label>Franchise Name</label>
                                 <select name="" id="" class="form-control">
                                     <option value="">Select Franchise</option>
                                     <option value="">demo 1</option>
@@ -185,7 +185,7 @@ $(document).ready(function() {
                     <div class="modal-body">
                         <div class="row">
                             <div class="form-group col-md-12">
-                                <label>Frachise Name</label>
+                                <label>Franchise Name</label>
                                 <select name="" id="" class="form-control">
                                     <option value="">Select Franchise</option>
                                     <option value="">demo 1</option>

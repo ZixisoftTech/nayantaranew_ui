@@ -4,11 +4,11 @@
 <?php 
 // $basePath = 'http://localhost/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 
-$basePath = 'https://nayantarabyspacs.co.in'; 
+require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('https://nayantarabyspacs.co.in'); 
 
 // $path = "http://localhost:8085";
 // $path = "http://65.0.164.127:8000";
-$path = "https://nayantarabyspacs.co.in";
+$path = nt_api('https://nayantarabyspacs.co.in');
 ?>
 
 <script type="text/javascript">
@@ -228,7 +228,9 @@ async function getStudentName(t) {
         serverMethod: 'get',
         ajax: {
             url: `<?= $path ?>/managestudents/get-transactionbystudentid`,
+            headers: { Authorization: 'Bearer ' + (localStorage.getItem('franchisetoken') || '') },
             data: function(d) {
+                d.department_id = $('#department_id').val()
                 d.id = $('#student_id').val()
                 d.start_date = $('#start_date').val()
                 d.end_date = $('#end_date').val()
@@ -267,12 +269,16 @@ async function getStudentName(t) {
     $(document).ready(function() {
         $("#start_date").datepicker({
             dateFormat: "yy-mm-dd",
+                format: "yyyy-mm-dd",
+                autoclose: true,
         });
     });
 
     $(document).ready(function() {
         $("#end_date").datepicker({
             dateFormat: "yy-mm-dd",
+                format: "yyyy-mm-dd",
+                autoclose: true,
             minDate: 0,
         });
     });

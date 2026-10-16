@@ -1,19 +1,5 @@
-        <!-- <footer class="footer">
-            <div class="container-fluid">
-                <div class="row">
-                    <div class="col-sm-6">
-                        <script>
-                        document.write(new Date().getFullYear())
-                        </script> © Nayan tara.
-                    </div>
-                    <div class="col-sm-6">
-                        <div class="text-sm-right d-none d-sm-block">
-                            Design & Develop by Vedansh Technovision
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </footer> -->
-
+        <footer class="nt-footer">
+            <span>&copy; <?= date('Y') ?> Nayan Tara by SPACS. All rights reserved.</span>
+        </footer>
         </div>
         </div>

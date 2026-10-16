@@ -5,11 +5,11 @@
 
 // $basePath = 'http://192.168.29.47/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend';
-$basePath = 'http://nayantarabyspacs.co.in'; 
+require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('http://nayantarabyspacs.co.in'); 
  
 // $path = "http://192.168.29.47:8085";
 // $path = "http://65.0.164.127:8000"; 
-$path = "http://nayantarabyspacs.co.in:8085";
+$path = nt_api('http://nayantarabyspacs.co.in:8085');
 
 ?>
 

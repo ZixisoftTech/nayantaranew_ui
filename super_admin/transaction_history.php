@@ -4,11 +4,11 @@
 <?php
 // $basePath = 'http://localhost/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 
-$basePath = 'https://nayantarabyspacs.co.in'; 
+require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('https://nayantarabyspacs.co.in'); 
 
 // $path = "http://localhost:8085";
 // $path = "http://65.0.164.127:8000"; 
-$path = "https://nayantarabyspacs.co.in";
+$path = nt_api('https://nayantarabyspacs.co.in');
 
 ?>
 
@@ -211,6 +211,7 @@ async function getDepartment(t) {
         ajax: {
             url: `<?= $path ?>/api/get-plans`,
             data: function(d) {
+                d.franchise_id = $('#franchise_id').val()
                 d.id = $('#department_id').val()
                 d.start_date = $('#start_date').val()
                 d.end_date = $('#end_date').val()
@@ -249,12 +250,16 @@ async function getDepartment(t) {
     $(document).ready(function() {
         $("#start_date").datepicker({
             dateFormat: "yy-mm-dd",
+                format: "yyyy-mm-dd",
+                autoclose: true,
         });
     });
 
     $(document).ready(function() {
         $("#end_date").datepicker({
             dateFormat: "yy-mm-dd",
+                format: "yyyy-mm-dd",
+                autoclose: true,
             minDate: 0,
         });
     });

@@ -4,11 +4,11 @@
 <?php 
 // $basePath = 'http://localhost/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 
-$basePath = 'https://nayantarabyspacs.co.in'; 
+require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('https://nayantarabyspacs.co.in'); 
 
 // $path = "http://localhost:8085";
 // $path = "http://65.0.164.127:8000";
-$path = "https://nayantarabyspacs.co.in";
+$path = nt_api('https://nayantarabyspacs.co.in');
 
 ?>
 
@@ -358,7 +358,7 @@ async function updateCity(t) {
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title mt-0" id="myLargeModalLabel">Create</h5>
+                    <h5 class="modal-title mt-0" id="myLargeModalLabel">Add franchise</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -446,7 +446,7 @@ async function updateCity(t) {
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title mt-0" id="myLargeModalLabel">Edit</h5>
+                    <h5 class="modal-title mt-0" id="myLargeModalLabel">Edit franchise</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -510,7 +510,7 @@ async function updateCity(t) {
                                 <input type="number" name="editpincode" min="1" id="editpincode" class="form-control">
                             </div>
                             <div class="form-group col-md-6">
-                                <label>By Paln Permission<span class="req" style="color:red">*</span></label>
+                                <label>By Plan Permission<span class="req" style="color:red">*</span></label>
                                 <select name="editby_plan_permision" id="editby_plan_permision" class="form-control">
                                     <option value='' selected disabled>---Select---</option>
                                     <option value="1">Yes</option>
