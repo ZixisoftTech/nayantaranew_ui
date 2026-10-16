@@ -1,0 +1,78 @@
+.bg1 {
+  background-image: linear-gradient(
+    192.03deg,
+    rgba(0, 0, 0, 0.97) -2.63%,
+    rgba(33, 15, 7, 0.88) 25.4%,
+    rgba(126, 57, 26, 0.9) 55.86%,
+    #9f4a21 100%
+  );
+}
+.bg2 {
+  background-color: #fef8f1;
+}
+
+.logo--hd {
+  font-size: 24px;
+  color: #fff;
+  font-style: normal;
+  line-height: 60px;
+}
+
+a.btn-sm {
+  border: 1px solid #bbb;
+  color: #bbb;
+}
+
+a.waves-effect.active {
+  background: whitesmoke !important;
+  border-left: 2px solid;
+}
+
+.req {
+    color: red;
+}
+
+.login-btn {
+  border: none;
+  color: white;
+  padding: 10px 100px;
+  text-align: center;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  cursor: pointer;
+  border-radius: 24px;
+  background: linear-gradient(
+    270deg,
+    #2b201b -10.67%,
+    #a0683d 52.12%,
+    #a45e30 100%
+  );
+}
+
+.login-btn:hover {
+  background-color: greenyellow !important;
+  transition: 0.5s;
+}
+
+.bg-color {
+  background: linear-gradient(
+    270deg,
+    #2b201b -10.67%,
+    #a0683d 52.12%,
+    #a45e30 100%
+  );
+}
+
+.create-btn {
+  background-color: #e98d00 !important;
+  border: #e98d00 !important;
+}
+.create-btn:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.create-btn:hover {
+  background-color: #f89808 !important;
+}
