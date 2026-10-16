@@ -36,7 +36,7 @@ require_once __DIR__ . '/config.php'; $basePath = nt_base('https://nayantarabysp
     <link href="<?= $basePath ?>/assets/admin/css/app.min.css" id="app-style" rel="stylesheet" type="text/css" />
     <link href="<?= $basePath ?>/assets/admin/css/style.css" id="app-style" rel="stylesheet" type="text/css" />
     <link href="<?= $basePath ?>/assets/admin/libs/sweetalert2/sweetalert2.min.css" rel="stylesheet" type="text/css" />
-    <link href="<?= $basePath ?>/assets/admin/css/theme.css?v=27" rel="stylesheet" type="text/css" />
+    <link href="<?= $basePath ?>/assets/admin/css/theme.css?v=28" rel="stylesheet" type="text/css" />
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>

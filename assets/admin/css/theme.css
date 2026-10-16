@@ -2280,3 +2280,50 @@ html.nt div.dt-button-info {
 }
 html.nt div.dt-button-info h2 { font-size: 16px; font-weight: 600; border: 0; background: none; padding: 0 0 6px; color: var(--nt-text); }
 html.nt div.dt-button-info > div { padding: 0; font-size: 14px; color: var(--nt-muted); }
+
+/* =========================================================================
+   Summary cards above tables (assets/admin/js/nt-metrics.js)
+   ========================================================================= */
+html.nt .nt-metrics { margin-bottom: 16px; }
+html.nt .nt-metrics-scope {
+  display: inline-flex; align-items: center; gap: 6px; margin-bottom: 8px;
+  font-size: 12px; font-weight: 500; color: var(--nt-info);
+  background: var(--nt-info-soft); border-radius: 999px; padding: 3px 10px 3px 8px;
+}
+html.nt .nt-metrics-scope i { font-size: 14px; }
+html.nt .nt-metrics-grid {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(var(--nt-metric-cols, 4), minmax(0, 1fr));
+}
+html.nt .nt-metric {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  background: var(--nt-surface); border: 1px solid var(--nt-border); border-radius: var(--nt-radius);
+  box-shadow: var(--nt-shadow-sm); padding: 14px 16px; min-width: 0;
+  transition: opacity .15s ease;
+}
+html.nt .nt-metric-body { display: flex; flex-direction: column; min-width: 0; }
+html.nt .nt-metric-label { font-size: 12.5px; font-weight: 500; color: var(--nt-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.nt .nt-metric-value {
+  font-size: 22px; font-weight: 700; color: var(--nt-text); line-height: 1.25; margin-top: 2px;
+  letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+html.nt .nt-metric-hint { font-size: 12px; color: var(--nt-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.nt .nt-metric-icon {
+  flex: none; width: 36px; height: 36px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 19px; background: var(--nt-info-soft); color: var(--nt-info);
+}
+html.nt .nt-metric[data-tone="green"] .nt-metric-icon { background: var(--nt-success-soft); color: var(--nt-success); }
+html.nt .nt-metric[data-tone="orange"] .nt-metric-icon { background: var(--nt-primary-soft); color: var(--nt-primary); }
+html.nt .nt-metric[data-tone="red"] .nt-metric-icon { background: var(--nt-danger-soft); color: var(--nt-danger); }
+html.nt .nt-metric[data-tone="violet"] .nt-metric-icon { background: #f1edfd; color: #6941c6; }
+html.nt .nt-metrics.is-loading .nt-metric { opacity: .55; }
+html.nt .nt-metric-skeleton { height: 82px; background: linear-gradient(90deg, var(--nt-surface) 0%, var(--nt-surface-2) 50%, var(--nt-surface) 100%); background-size: 200% 100%; animation: nt-metric-shimmer 1.2s linear infinite; }
+@keyframes nt-metric-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (max-width: 1199.98px) { html.nt .nt-metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 575.98px) {
+  html.nt .nt-metrics-grid { gap: 8px; }
+  html.nt .nt-metric { padding: 12px; }
+  html.nt .nt-metric-icon { display: none; }
+  html.nt .nt-metric-value { font-size: 18px; }
+}
+@media (prefers-reduced-motion: reduce) { html.nt .nt-metric-skeleton { animation: none; } }

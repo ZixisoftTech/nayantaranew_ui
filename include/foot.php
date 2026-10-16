@@ -35,6 +35,7 @@
     <script src="<?= $basePath ?>/assets/admin/js/nt-table.js?v=9"></script>
     <script src="<?= $basePath ?>/assets/admin/js/nt-lookup.js?v=5"></script>
     <script src="<?= $basePath ?>/assets/admin/js/nt-forms.js?v=9"></script>
+    <script src="<?= $basePath ?>/assets/admin/js/nt-metrics.js?v=2"></script>
 
 
   
