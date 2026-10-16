@@ -1,0 +1,33 @@
+const express = require('express');
+const router = express.Router();
+const { Parentlogin, Parentotp, otpMatch, passwordUpdate, Logout, parentProfile, parentProfileUpdate, getOtp } = require('../../models/parent/login');
+const { getAvailablemin, getSubscription, buySubscription, getTarnsition, callhistory, updateParentStatus, getStatusByParentId, studentCallMinute, getWebStatusByStudentId, parentIssue, parentCallEnd, callDefuse, planPermision, getParentIssue, getParentByStudentId, parentLogout } = require('../../models/parent/otpsend');
+const { getStudentByParentId } = require("../../models/parent/new_api");
+
+router.get('/get-parentissue', getParentIssue);
+router.post('/get-planpermission', planPermision);
+router.post('/parent-calldefuse', callDefuse);
+router.post('/parent-callend', parentCallEnd);
+router.post('/get-parentotp', getOtp);
+router.post('/parent-issue', parentIssue);
+router.post('/password-update', parentProfileUpdate);
+router.post('/get-parentprofile', parentProfile);
+router.get('/get-studentweb/:id', getWebStatusByStudentId);
+router.post('/get-parentcallminute', studentCallMinute);
+router.post('/getparentstatus-bycallhistory', getStatusByParentId);
+router.post('/status-updateparent', updateParentStatus);
+router.post('/parent-callhistory', callhistory);
+router.post('/parent-logout', Logout);
+router.post('/getparent/transition', getTarnsition);
+router.post('/planpurchase/parent', buySubscription);
+router.post('/getsubscriptions/parent', getSubscription);
+router.post('/avilable-min', getAvailablemin);
+router.post('/login-parent', Parentlogin);
+router.post('/login-otp', Parentotp);
+router.post('/otp-verify', otpMatch);
+router.post('/reset-password', passwordUpdate);
+router.post('/get-student', getStudentByParentId);
+router.get('/getparent-studentid', getParentByStudentId);
+router.post('/logout', parentLogout);
+
+module.exports = router;
