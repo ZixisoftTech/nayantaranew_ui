@@ -16,7 +16,7 @@ $path = nt_api('https://nayantarabyspacs.co.in');
 $(document).ready(function() {
     var dataTable = $("#datatable").DataTable({
         dom: 'Bfrtip',
-        pageLength: 100,
+        pageLength: 25,
         buttons: [
             'copy', 'csv', 'excel', 'pdf', 'print'
         ],

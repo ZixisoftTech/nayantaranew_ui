@@ -39,7 +39,7 @@ $(document).ready(function() {
 async function getParents(id) {
     var dataTable = $("#datatable_manageparents").DataTable({
         dom: 'Bfrtip',
-        pageLength: 100,
+        pageLength: 25,
         buttons: [
             'copy', 'csv', 'excel', 'pdf', 'print'
         ],

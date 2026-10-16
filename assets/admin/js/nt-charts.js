@@ -4,6 +4,8 @@
  * Colours (validated with the data-viz palette checker, light surface):
  *   series 1 blue  #2a78d6, series 2 brand orange #e2761b. Orange sits just under 3:1
  *   against the surface, so every orange chart carries visible values (KPI + data labels).
+ * Heatmap: one-hue blue ramp (light -> dark), zero cells neutral grey. Red is reserved for the
+ * "Overdrawn" talk-time state and always appears with its label.
  * Marks: thin bars with rounded ends, 2px lines, 2px surface gaps between stacked segments,
  * recessive grid, hover tooltips on every chart. One y-axis per chart, always.
  */
@@ -24,10 +26,13 @@
         muted: '#667085',
         grid: '#eef0f3',
         surface: '#ffffff',
+        critical: '#d92d20',
         font: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     };
 
     var charts = {};
+    var IDS = ['nt-chart-purchases', 'nt-chart-calls', 'nt-chart-heatmap', 'nt-chart-signups', 'nt-chart-lengths',
+               'nt-chart-students', 'nt-chart-plans', 'nt-chart-revenue', 'nt-chart-balances'];
     var current = 90;
 
     /* ----------------------------------------------------------- helpers */
@@ -112,6 +117,14 @@
         };
     }
 
+    // whole-number y-axis; small maxima get one tick per unit so labels never repeat (0, 0, 1, 1)
+    function countAxis(series) {
+        var max = 0;
+        series.forEach(function (sr) { sr.data.forEach(function (p) { max = Math.max(max, Array.isArray(p) ? p[1] : p); }); });
+        return { min: 0, max: max < 4 ? Math.max(1, max) : undefined, forceNiceScale: max >= 4, tickAmount: Math.min(4, Math.max(1, max)),
+                 labels: { formatter: function (v) { return fmt(Math.round(v)); } } };
+    }
+
     function tooltipBox(title, rows) {
         return '<div class="nt-tip"><div class="nt-tip-title">' + title + '</div>' + rows.map(function (r) {
             return '<div class="nt-tip-row"><span class="nt-tip-key"><i style="background:' + r[2] + '"></i>' + r[0] + '</span><strong>' + r[1] + '</strong></div>';
@@ -156,7 +169,7 @@
         o.colors = [C.orange];
         o.plotOptions = { bar: { columnWidth: b.length > 40 ? '80%' : '55%', endingShape: 'rounded' } };
         o.xaxis = timeAxis();
-        o.yaxis = { min: 0, forceNiceScale: true, tickAmount: 4, labels: { formatter: function (v) { return fmt(Math.round(v)); } } };
+        o.yaxis = countAxis(o.series);
         o.tooltip.custom = function (ctx) {
             var x = b[ctx.dataPointIndex];
             return tooltipBox(x.long, [['Purchases', fmt(x.count), C.orange], ['Plan value', rupees(x.value), 'transparent']]);
@@ -179,7 +192,7 @@
         o.markers = { size: 0, strokeColors: C.surface, strokeWidth: 2, hover: { size: 5 } };
         o.xaxis = timeAxis();
         o.xaxis.crosshairs = { stroke: { color: '#d4d8de', width: 1, dashArray: 0 } };
-        o.yaxis = { min: 0, forceNiceScale: true, tickAmount: 4, labels: { formatter: function (v) { return fmt(Math.round(v)); } } };
+        o.yaxis = countAxis(o.series);
         o.tooltip.custom = function (ctx) {
             var x = b[ctx.dataPointIndex];
             return tooltipBox(x.long, [['Minutes', fmt(x.minutes), C.blue], ['Calls', fmt(x.calls), 'transparent']]);
@@ -244,17 +257,161 @@
         render('nt-chart-plans', o, total > 0, 'No plans purchased in the ' + periodText() + '.');
     }
 
+    // sequential single-hue ramp (light -> dark blue) for the heatmap; zero stays neutral
+    var HEAT = ['#dbe8f8', '#a9c8ef', '#73a6e4', '#2a78d6', '#1b5aa8', '#123d73'];
+    var DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    var DAY_ORDER = [2, 3, 4, 5, 6, 7, 1]; // Monday first (MySQL DAYOFWEEK: 1 = Sunday)
+
+    function hourLabel(h) { return (h % 12 || 12) + (h < 12 ? ' am' : ' pm'); }
+
+    function heatmapChart(rows) {
+        var grid = {};
+        var total = 0, max = 0;
+        rows.forEach(function (r) { grid[r.dow + '-' + r.hour] = r.calls; total += r.calls; max = Math.max(max, r.calls); });
+        var peak = null;
+        rows.forEach(function (r) { if (!peak || r.calls > peak.calls) peak = r; });
+        // busiest hour across all weekdays
+        var byHour = new Array(24).fill(0);
+        rows.forEach(function (r) { byHour[r.hour] += r.calls; });
+        var busiest = byHour.indexOf(Math.max.apply(null, byHour));
+        setKpi('heatmap', total ? hourLabel(busiest) + '–' + hourLabel((busiest + 1) % 24) : '—', total ? 'busiest hour · ' + periodText() : '');
+        root.querySelector('[data-note="heatmap"]').textContent = peak
+            ? 'Calls by weekday and hour · peak ' + DAYS[peak.dow - 1] + ' ' + hourLabel(peak.hour) + ' (' + fmt(peak.calls) + ')'
+            : 'Calls by weekday and hour';
+
+        // series are drawn bottom-up, so reverse to put Monday on top
+        var series = DAY_ORDER.slice().reverse().map(function (dow) {
+            return { name: DAYS[dow - 1].slice(0, 3), dow: dow, data: byHour.map(function (_, h) { return { x: hourLabel(h), y: grid[dow + '-' + h] || 0 }; }) };
+        });
+        // contiguous bands (ApexCharts falls back to its own palette for any value outside a band)
+        var step = max / HEAT.length;
+        var ranges = [{ from: -1, to: 0.5, color: '#f2f4f7', name: 'No calls' }];
+        HEAT.forEach(function (c, i) {
+            ranges.push({ from: i === 0 ? 0.5 : step * i, to: i === HEAT.length - 1 ? max + 1 : step * (i + 1), color: c });
+        });
+
+        var o = base('heatmap', 300);
+        o.series = series;
+        o.stroke = { width: 2, colors: [C.surface] };
+        o.plotOptions = { heatmap: { radius: 3, enableShades: false, colorScale: { ranges: ranges } } };
+        o.grid = { padding: { left: 0, right: 8, top: -8, bottom: 0 } };
+        o.xaxis = { labels: { rotate: 0, hideOverlappingLabels: true, style: { fontSize: '11px' },
+                              formatter: function (v) { return v; } },
+                    tickAmount: 12, axisBorder: { show: false }, axisTicks: { show: false }, tooltip: { enabled: false } };
+        o.yaxis = { labels: { style: { fontSize: '12px', colors: [C.text] } } };
+        o.tooltip.custom = function (ctx) {
+            var sr = series[ctx.seriesIndex];
+            var h = ctx.dataPointIndex;
+            return tooltipBox(DAYS[sr.dow - 1] + ', ' + hourLabel(h) + '–' + hourLabel((h + 1) % 24),
+                [['Calls', fmt(sr.data[h].y), C.blue]]);
+        };
+        render('nt-chart-heatmap', o, total > 0, 'No calls in the ' + periodText() + '.');
+    }
+
+    function signupsChart(rows) {
+        var b = fill(rows, current, ['count']);
+        var total = b.reduce(function (s, x) { return s + x.count; }, 0);
+        setKpi('signups', fmt(total), 'added · ' + periodText());
+        root.querySelector('[data-note="signups"]').textContent = current > 90 ? 'Students added per month' : 'Students added per day';
+
+        var o = base('bar');
+        o.series = [{ name: 'New students', data: b.map(function (x) { return [x.ts, x.count]; }) }];
+        o.colors = [C.blue];
+        o.plotOptions = { bar: { columnWidth: b.length > 40 ? '80%' : '55%', endingShape: 'rounded' } };
+        o.xaxis = timeAxis();
+        o.yaxis = countAxis(o.series);
+        o.tooltip.custom = function (ctx) {
+            var x = b[ctx.dataPointIndex];
+            return tooltipBox(x.long, [['New students', fmt(x.count), C.blue]]);
+        };
+        render('nt-chart-signups', o, total > 0, 'No new students in the ' + periodText() + '. Try “12 months”.');
+    }
+
+    var LENGTHS = ['Under 1 min', '1–3 min', '3–5 min', '5–10 min', '10–20 min', '20+ min'];
+
+    function lengthsChart(counts) {
+        var total = counts.reduce(function (s, n) { return s + n; }, 0);
+        var max = Math.max.apply(null, counts);
+        var longer = total ? Math.round(((total - counts[0]) / total) * 100) : 0;
+        setKpi('lengths', total ? longer + '%' : '—', total ? 'last a minute or more' : '');
+
+        var o = base('bar');
+        o.series = [{ name: 'Calls', data: counts }];
+        o.colors = [C.blue];
+        o.plotOptions = { bar: { columnWidth: '50%', endingShape: 'flat', dataLabels: { position: 'top' } } };
+        o.dataLabels = { enabled: true, offsetY: -20, style: { fontSize: '12px', fontWeight: 600, colors: [C.text] },
+                         formatter: function (v) { return v >= max * 0.04 ? fmt(v) : ''; }, dropShadow: { enabled: false } };
+        o.xaxis = { categories: LENGTHS, labels: { rotate: 0, hideOverlappingLabels: false, trim: false, style: { fontSize: '12px' } },
+                    axisBorder: { color: C.grid }, axisTicks: { show: false }, tooltip: { enabled: false } };
+        o.yaxis = countAxis(o.series);
+        o.tooltip.custom = function (ctx) {
+            var n = counts[ctx.dataPointIndex];
+            return tooltipBox(LENGTHS[ctx.dataPointIndex], [['Calls', fmt(n), C.blue], ['Share', (total ? Math.round(n / total * 100) : 0) + '%', 'transparent']]);
+        };
+        render('nt-chart-lengths', o, total > 0, 'No connected calls in the ' + periodText() + '.');
+    }
+
+    function revenueChart(rows) {
+        var value = rows.reduce(function (s, r) { return s + r.value; }, 0);
+        var max = rows.reduce(function (m, r) { return Math.max(m, r.value); }, 0);
+        setKpi('revenue', rupees(value), (rows.length >= 8 ? 'top 8 · ' : '') + periodText());
+
+        var o = base('bar', Math.max(200, rows.length * 40 + 60));
+        o.series = [{ name: 'Revenue', data: rows.map(function (r) { return r.value; }) }];
+        o.colors = [C.orange];
+        o.plotOptions = { bar: { horizontal: true, barHeight: '56%', endingShape: 'rounded' } };
+        o.dataLabels = { enabled: true, style: { fontSize: '12px', fontWeight: 600, colors: [C.text] },
+                         formatter: function (v) { return v >= max * 0.12 ? rupees(v) : ''; }, dropShadow: { enabled: false } };
+        o.grid.xaxis = { lines: { show: true } };
+        o.grid.yaxis = { lines: { show: false } };
+        o.xaxis = { categories: rows.map(function (r) { return r.label; }), labels: { formatter: function (v) { return v >= 1000 ? '₹' + fmt(Math.round(v / 1000)) + 'k' : '₹' + fmt(Math.round(v)); } },
+                    axisBorder: { show: false }, axisTicks: { show: false }, tickAmount: 4 };
+        o.yaxis = { labels: { maxWidth: 170, style: { fontSize: '13px', colors: [C.text] } } };
+        o.tooltip.custom = function (ctx) {
+            var r = rows[ctx.dataPointIndex];
+            return tooltipBox(r.label, [['Revenue', rupees(r.value), C.orange], ['Plans sold', fmt(r.count), 'transparent']]);
+        };
+        render('nt-chart-revenue', o, value > 0, 'No plans sold in the ' + periodText() + '.');
+    }
+
+    var BALANCES = ['Overdrawn', 'Under 30 min', '30–60 min', '1–2 hours', '2+ hours'];
+
+    function balancesChart(counts) {
+        var total = counts.reduce(function (s, n) { return s + n; }, 0);
+        var max = Math.max.apply(null, counts);
+        setKpi('balances', fmt(counts[0]), counts[0] === 1 ? 'student overdrawn' : 'students overdrawn');
+
+        var o = base('bar', 260);
+        o.series = [{ name: 'Students', data: counts }];
+        // "Overdrawn" is a state, so it takes the reserved critical colour; it is also named in the label
+        o.colors = [C.critical, C.blue, C.blue, C.blue, C.blue];
+        o.plotOptions = { bar: { horizontal: true, barHeight: '56%', endingShape: 'rounded', distributed: true } };
+        o.dataLabels = { enabled: true, style: { fontSize: '12px', fontWeight: 600, colors: [C.text] },
+                         formatter: function (v) { return v >= max * 0.06 ? fmt(v) : ''; }, dropShadow: { enabled: false } };
+        o.grid.xaxis = { lines: { show: true } };
+        o.grid.yaxis = { lines: { show: false } };
+        o.xaxis = { categories: BALANCES, labels: { formatter: function (v) { return fmt(Math.round(v)); } },
+                    axisBorder: { show: false }, axisTicks: { show: false }, tickAmount: 4 };
+        o.yaxis = { labels: { maxWidth: 170, style: { fontSize: '13px', colors: [C.text] } } };
+        o.tooltip.custom = function (ctx) {
+            var n = counts[ctx.dataPointIndex];
+            return tooltipBox(BALANCES[ctx.dataPointIndex], [['Students', fmt(n), ctx.dataPointIndex === 0 ? C.critical : C.blue],
+                ['Share', (total ? Math.round(n / total * 100) : 0) + '%', 'transparent']]);
+        };
+        render('nt-chart-balances', o, total > 0, 'No students yet.');
+    }
+
     /* ---------------------------------------------------------- loading */
 
     function setLoading() {
-        ['nt-chart-purchases', 'nt-chart-calls', 'nt-chart-students', 'nt-chart-plans'].forEach(function (id) {
+        IDS.forEach(function (id) {
             var host = document.getElementById(id);
             if (!charts[id]) host.classList.add('is-loading');
         });
     }
 
     function showError(message) {
-        ['nt-chart-purchases', 'nt-chart-calls', 'nt-chart-students', 'nt-chart-plans'].forEach(function (id) {
+        IDS.forEach(function (id) {
             if (charts[id]) { charts[id].destroy(); delete charts[id]; }
             var host = document.getElementById(id);
             host.classList.remove('is-loading');
@@ -273,6 +430,11 @@
                 callsChart(d.calls);
                 studentsChart(d.students);
                 plansChart(d.topPlans);
+                heatmapChart(d.heatmap || []);
+                signupsChart(d.signups || []);
+                lengthsChart(d.callLengths || [0, 0, 0, 0, 0, 0]);
+                revenueChart(d.revenue || []);
+                balancesChart(d.balances || [0, 0, 0, 0, 0]);
             })
             .catch(function (err) { showError(String(err.message).replace(/</g, '&lt;')); });
     }

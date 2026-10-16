@@ -39,7 +39,7 @@ getName();
 async function getCallSchedule(id) {
     var dataTable = $("#department_time").DataTable({
         dom: 'Bfrtip',
-        pageLength: 50,
+        pageLength: 25,
         buttons: [
             'copy', 'csv', 'excel', 'pdf', 'print'
         ],

@@ -166,7 +166,7 @@ async function getPlan(id) {
     <script type="text/javascript">
     $('#datatable_student').DataTable({
         dom: 'Bfrtip',
-        pageLength: 100,
+        pageLength: 25,
         buttons: [
             'copy', 'csv', 'excel', 'pdf', 'print'
         ],

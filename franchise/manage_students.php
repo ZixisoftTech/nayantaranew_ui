@@ -103,7 +103,7 @@ async function department(id) {
 async function getStudents(id) {
     var dataTable = $("#datatable_managestudent").DataTable({
         dom: 'Bfrtip',
-        pageLength: 100,
+        pageLength: 25,
         buttons: [
             'copy', 'csv', 'excel', 'pdf', 'print'
         ],

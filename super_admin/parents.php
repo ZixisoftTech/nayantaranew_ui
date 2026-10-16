@@ -104,7 +104,7 @@ getFranchise()
     <script>
     $('#datatable_parents').DataTable({
         dom: 'Bfrtip',
-        pageLength: 100,
+        pageLength: 25,
         buttons: [
             'copy', 'csv', 'excel', 'pdf', 'print'
         ],

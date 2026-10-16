@@ -44,6 +44,42 @@ $ntPortal = (isset($ntChartsPortal) && $ntChartsPortal === 'franchise') ? 'franc
                 <div class="nt-chart" id="nt-chart-calls" role="img" aria-label="Call minutes over time"></div>
             </div>
         </div>
+        <div class="col-12">
+            <div class="card nt-chart-card">
+                <div class="nt-chart-head">
+                    <div>
+                        <h3>When calls happen</h3>
+                        <p class="nt-chart-note" data-note="heatmap">Calls by weekday and hour</p>
+                    </div>
+                    <div class="nt-chart-kpi" data-kpi="heatmap"><span class="nt-kpi-value">—</span><span class="nt-kpi-label">&nbsp;</span></div>
+                </div>
+                <div class="nt-chart" id="nt-chart-heatmap" role="img" aria-label="Calls by weekday and hour of day"></div>
+            </div>
+        </div>
+        <div class="col-xl-6">
+            <div class="card nt-chart-card">
+                <div class="nt-chart-head">
+                    <div>
+                        <h3>New students</h3>
+                        <p class="nt-chart-note" data-note="signups">Students added per day</p>
+                    </div>
+                    <div class="nt-chart-kpi" data-kpi="signups"><span class="nt-kpi-value">—</span><span class="nt-kpi-label">&nbsp;</span></div>
+                </div>
+                <div class="nt-chart" id="nt-chart-signups" role="img" aria-label="New students over time"></div>
+            </div>
+        </div>
+        <div class="col-xl-6">
+            <div class="card nt-chart-card">
+                <div class="nt-chart-head">
+                    <div>
+                        <h3>Call length</h3>
+                        <p class="nt-chart-note">Connected calls by duration</p>
+                    </div>
+                    <div class="nt-chart-kpi" data-kpi="lengths"><span class="nt-kpi-value">—</span><span class="nt-kpi-label">&nbsp;</span></div>
+                </div>
+                <div class="nt-chart" id="nt-chart-lengths" role="img" aria-label="Connected calls grouped by duration"></div>
+            </div>
+        </div>
         <div class="col-xl-6">
             <div class="card nt-chart-card">
                 <div class="nt-chart-head">
@@ -68,7 +104,31 @@ $ntPortal = (isset($ntChartsPortal) && $ntChartsPortal === 'franchise') ? 'franc
                 <div class="nt-chart" id="nt-chart-plans" role="img" aria-label="Most purchased plans"></div>
             </div>
         </div>
+        <div class="col-xl-6">
+            <div class="card nt-chart-card">
+                <div class="nt-chart-head">
+                    <div>
+                        <h3>Revenue by <?= $ntPortal === 'franchise' ? 'department' : 'franchise' ?></h3>
+                        <p class="nt-chart-note">Plan value sold in this period</p>
+                    </div>
+                    <div class="nt-chart-kpi" data-kpi="revenue"><span class="nt-kpi-value">—</span><span class="nt-kpi-label">&nbsp;</span></div>
+                </div>
+                <div class="nt-chart" id="nt-chart-revenue" role="img" aria-label="Plan revenue by group"></div>
+            </div>
+        </div>
+        <div class="col-xl-6">
+            <div class="card nt-chart-card">
+                <div class="nt-chart-head">
+                    <div>
+                        <h3>Talk-time balance</h3>
+                        <p class="nt-chart-note">Students by remaining talk time · now</p>
+                    </div>
+                    <div class="nt-chart-kpi" data-kpi="balances"><span class="nt-kpi-value">—</span><span class="nt-kpi-label">&nbsp;</span></div>
+                </div>
+                <div class="nt-chart" id="nt-chart-balances" role="img" aria-label="Students grouped by remaining talk time"></div>
+            </div>
+        </div>
     </div>
 </section>
 <script src="<?= $basePath ?>/assets/admin/libs/apexcharts/apexcharts.min.js"></script>
-<script src="<?= $basePath ?>/assets/admin/js/nt-charts.js?v=4"></script>
+<script src="<?= $basePath ?>/assets/admin/js/nt-charts.js?v=8"></script>
