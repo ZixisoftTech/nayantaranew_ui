@@ -594,29 +594,31 @@ const parentCallEnd = (req, res, next) => {
                             return res.status(200).send({ error: true, message: "Meetinglink not found", data: null });
                         }
                         else {
-                            // if (callhistory[0].status == 3) {
-                            //     return res.status(200).send({ error: true, message: "Call already ended", data: null });
-                            // } else {
+                            if (callhistory[0].status == 3) {
+                                return res.status(200).send({ error: true, message: "Call already ended", data: null });
+                            }
                             if (status == 3) {
-                                const sql = 'UPDATE `tbl_callhistory` SET `minute`= "' + availablemin + '",`status`= "' + status + '"  WHERE `meeting_link` = "' + meetinglink + '"';
-                                const VALUES = [availablemin, status];
-                                dataBase.query(sql, [VALUES], function (error, statusUpdate, fields) {
+                                // only the request that actually ends the call charges it (student and parent may both send end)
+                                const sql = 'UPDATE `tbl_callhistory` SET `minute` = ?, `status` = ? WHERE `meeting_link` = ? AND `status` <> 3';
+                                dataBase.query(sql, [availablemin, status, meetinglink], function (error, statusUpdate, fields) {
+                                    if (statusUpdate && statusUpdate.affectedRows === 0) {
+                                        return res.status(200).send({ error: true, message: "Call already ended", data: null });
+                                    }
                                     if (statusUpdate) {
                                         dataBase.query('SELECT * From tbl_parents WHERE student_id = ?', [callhistory[0].student_id], function (error, parentfound, fields) {
                                             if (parentfound == 0) {
                                                 return res.status(200).send({ error: true, message: "student not found in parent", data: null });
                                             }
                                             else {
-                                                const talktime_minutes = parentfound[0].total_talktime - availablemin;
-                                                dataBase.query('UPDATE tbl_parents SET total_talktime = ? WHERE student_id = ?', [talktime_minutes, callhistory[0].student_id], function (error, updatemin, fields) {
+                                                // never take a positive balance below 0; an already-negative balance is left as is
+                                                dataBase.query('UPDATE tbl_parents SET total_talktime = IF(total_talktime > 0, GREATEST(total_talktime - ?, 0), total_talktime) WHERE student_id = ?', [Number(availablemin) || 0, callhistory[0].student_id], function (error, updatemin, fields) {
                                                     if (updatemin) {
                                                         dataBase.query('SELECT * FROM tbl_student WHERE id = "' + parentfound[0].student_id + '"', function (error, studentfound, results) {
                                                             if (studentfound == 0) {
                                                                 return res.status(200).send({ error: true, message: "Student not found", data: null });
                                                             }
                                                             else {
-                                                                const talktime_minutes = studentfound[0].total_talktime - availablemin;
-                                                                dataBase.query('UPDATE tbl_student SET total_talktime = ? WHERE id = "' + studentfound[0].id + '"', [talktime_minutes], function (error, Updatemin, fields) {
+                                                                dataBase.query('UPDATE tbl_student SET total_talktime = IF(total_talktime > 0, GREATEST(total_talktime - ?, 0), total_talktime) WHERE id = ?', [Number(availablemin) || 0, studentfound[0].id], function (error, Updatemin, fields) {
                                                                     if (Updatemin) {
                                                                         return res.status(200).send({ error: false, message: "Time Successfully update", data: null });
                                                                     }

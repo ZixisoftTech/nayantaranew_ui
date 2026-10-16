@@ -48,6 +48,8 @@ const toId = (value) => {
 };
 
 const minutes = (seconds) => Math.floor((Number(seconds) || 0) / 60);
+// total rows behind a LIMITed list (table/column are fixed identifiers, never user input)
+const count = (table, column, id) => q(`SELECT COUNT(*) AS n FROM ${table} WHERE ${column} = ?`, [id]).then((r) => r[0].n);
 
 /* ------------------------------------------------------------------ handlers */
 
@@ -130,6 +132,11 @@ const student = handle(async (req, auth) => {
         q(`SELECT id, subject, message, status, created_at
              FROM tbl_student_issue WHERE student_id = ? ORDER BY created_at DESC LIMIT 15`, [id]),
     ]);
+    const [planTotal, paymentTotal, ticketTotal] = await Promise.all([
+        count('tbl_plan_purchase', 'student_id', id),
+        count('tbl_student_payments', 'student_id', id).catch(() => payments.length),
+        count('tbl_student_issue', 'student_id', id),
+    ]);
 
     return {
         type: 'student',
@@ -139,6 +146,9 @@ const student = handle(async (req, auth) => {
             used_min: minutes(callTotals[0].seconds),
             calls: callTotals[0].count,
             parents: parents.length,
+            plans: planTotal,
+            payments: paymentTotal,
+            tickets: ticketTotal,
         },
         parents,
         calls: calls.map((c) => ({ ...c, minutes: minutes(c.minute) })),
@@ -170,11 +180,15 @@ const parent = handle(async (req, auth) => {
         q(`SELECT id, subject, message, status, created_at
              FROM tbl_parents_issue WHERE parent_id = ? ORDER BY created_at DESC LIMIT 15`, [id]),
     ]);
+    const [planTotal, ticketTotal] = await Promise.all([
+        count('tbl_plan_purchase', 'parent_id', id),
+        count('tbl_parents_issue', 'parent_id', id),
+    ]);
 
     return {
         type: 'parent',
         profile: row,
-        stats: { calls: callTotals[0].count, used_min: minutes(callTotals[0].seconds), plans: plans.length },
+        stats: { calls: callTotals[0].count, used_min: minutes(callTotals[0].seconds), plans: planTotal, tickets: ticketTotal },
         calls: calls.map((c) => ({ ...c, minutes: minutes(c.minute) })),
         plans,
         tickets,

@@ -374,33 +374,42 @@
         }).join('') + '</section>';
     }
 
-    function callsTab(calls, total, who) {
+    /* lists are capped by the API (latest 15); point to the full, filtered page when there is more */
+    function more(shown, total, href) {
+        if (!(total > shown)) return '';
+        return '<p class="nt-list-more">Showing latest ' + shown + ' of ' + num(total) +
+            (href ? '<a class="nt-list-more-link" href="' + esc(href) + '">View all<i class="bx bx-right-arrow-alt"></i></a>' : '') + '</p>';
+    }
+
+    function callsTab(calls, total, who, href) {
         return {
             title: 'Calls', count: total, icon: 'bx-phone-call', empty: 'No calls yet',
             html: list(calls.map(function (c) {
                 var other = who === 'parent' ? ref('parent', c.parent_id, c.parent_name) : ref('student', c.student_id, c.student_name);
                 return item(other, fmtDate(c.created_at, true), '<span class="nt-pill">' + num(c.minutes) + ' min</span>');
-            })) + (total > calls.length ? '<p class="nt-list-more">Showing latest ' + calls.length + ' of ' + num(total) + '</p>' : '')
+            })) + more(calls.length, total, href)
         };
     }
 
-    function plansTab(plans) {
+    function plansTab(plans, total, href) {
+        if (total === undefined) total = plans.length;
         return {
-            title: 'Plans', count: plans.length, icon: 'bx-purchase-tag', empty: 'No plans purchased',
+            title: 'Plans', count: total, icon: 'bx-purchase-tag', empty: 'No plans purchased',
             html: list(plans.map(function (p) {
                 return item('<strong>' + show(p.plan_name) + '</strong>',
                     'Bought ' + fmtDate(p.created_at) + (blank(p.plan_end_date) ? '' : ' · Ends ' + fmtDate(p.plan_end_date)),
                     money(p.plan_price) + '<span class="nt-list-meta">' + num(Math.floor((Number(p.plan_min) || 0) / 60)) + ' min</span>');
-            }))
+            })) + more(plans.length, total, href)
         };
     }
 
-    function ticketsTab(tickets) {
+    function ticketsTab(tickets, total) {
+        if (total === undefined) total = tickets.length;
         return {
-            title: 'Tickets', count: tickets.length, icon: 'bx-support', empty: 'No support tickets',
+            title: 'Tickets', count: total, icon: 'bx-support', empty: 'No support tickets',
             html: list(tickets.map(function (t) {
                 return item('<strong>' + show(t.subject) + '</strong>', show(t.message) + ' · ' + fmtDate(t.created_at));
-            }))
+            })) + more(tickets.length, total)
         };
     }
 
@@ -426,14 +435,14 @@
                       html: list(d.parents.map(function (x) {
                           return item(ref('parent', x.id, x.name), contact(x.contact), statusBadge(x.status == 1, 'Logged in', 'Logged out'));
                       })) },
-                    callsTab(d.calls, d.stats.calls, 'parent'),
-                    plansTab(d.plans),
-                    { title: 'Payments', count: d.payments.length, icon: 'bx-wallet', empty: 'No payments',
+                    callsTab(d.calls, d.stats.calls, 'parent', 'call_history.php?student_id=' + p.id),
+                    plansTab(d.plans, d.stats.plans, 'transaction_history.php?student_id=' + p.id),
+                    { title: 'Payments', count: d.stats.payments === undefined ? d.payments.length : d.stats.payments, icon: 'bx-wallet', empty: 'No payments',
                       html: list(d.payments.map(function (x) {
                           return item(money(x.amount), fmtDate(x.created_at, true) + (blank(x.razorpay_payment_id) ? '' : ' · ' + esc(x.razorpay_payment_id)),
                               statusBadge(String(x.status).toUpperCase() === 'SUCCESS', x.status, x.status));
-                      })) },
-                    ticketsTab(d.tickets)
+                      })) + more(d.payments.length, d.stats.payments) },
+                    ticketsTab(d.tickets, d.stats.tickets)
                 ]);
         },
 
@@ -446,7 +455,11 @@
                 stats([['Calls', num(d.stats.calls)], ['Minutes talked', num(d.stats.used_min)], ['Plans', num(d.stats.plans)]]) +
                 gotoSection('parent', p) +
                 details([['Contact', contact(p.contact)], ['Email', email(p.email)], ['Added', fmtDate(p.created_at)]]) +
-                tabs([callsTab(d.calls, d.stats.calls, 'student'), plansTab(d.plans), ticketsTab(d.tickets)]);
+                tabs([
+                    callsTab(d.calls, d.stats.calls, 'student', 'call_history.php?parent_id=' + p.id),
+                    plansTab(d.plans, d.stats.plans, 'transaction_history.php?parent_id=' + p.id),
+                    ticketsTab(d.tickets, d.stats.tickets)
+                ]);
         },
 
         franchise: function (d) {

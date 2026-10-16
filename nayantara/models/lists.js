@@ -282,13 +282,14 @@ const adminParents = list({
         else if (franchise) { sql.push('p.franchise_id = ?'); args.push(franchise); }
         return { sql, args };
     },
-    select: 'p.id, p.student_id, p.name, p.contact, p.email, p.password, p.status',
+    select: 'p.id, p.student_id, p.name, p.contact, p.email, p.password, p.status, s.name AS student_name, s.student_roll_no',
     search: ['p.name', 'p.contact', 'p.email', 's.name', 's.student_roll_no'],
-    order: { index: 'p.id', name: 'p.name', contact: 'p.contact', email: 'p.email' },
+    order: { index: 'p.id', student_roll_no: 's.student_roll_no', student_name: 's.name', name: 'p.name', contact: 'p.contact', email: 'p.email' },
     defaultOrder: 'p.id DESC',
     row: (r, i) => ({
         _ref: { name: 'parent', parent: r.id, student: r.student_id },
-        index: i, name: esc(r.name), contact: esc(r.contact), email: esc(r.email), password: esc(r.password),
+        index: i, student_roll_no: esc(r.student_roll_no), student_name: esc(r.student_name),
+        name: esc(r.name), contact: esc(r.contact), email: esc(r.email), password: esc(r.password),
         action: r.status == 1 ? `<button class="btn-success" onClick="parentLogout(${r.id})">Logout</button>` : '',
     }),
 });

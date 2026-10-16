@@ -335,6 +335,35 @@
         });
     }
 
+    /* ----------------------------------------------------- long cell text */
+    // Tables are .nowrap, so one long message/address/email used to stretch its column
+    // across the screen. Long cells are clipped to one line with an ellipsis; hover shows
+    // the full text, a click expands it in place (click again to collapse).
+    var CLIP_CHARS = 40;
+
+    function clipLongCells(table) {
+        Array.prototype.forEach.call(table.tBodies, function (body) {
+            Array.prototype.forEach.call(body.rows, function (tr) {
+                Array.prototype.forEach.call(tr.cells, function (td) {
+                    if (td.classList.contains('nt-col-action') || td.classList.contains('dataTables_empty')) return;
+                    if (td.querySelector('.nt-clip, button, input, select, textarea, img, .nt-actions')) return;
+                    var text = td.textContent.replace(/\s+/g, ' ').trim();
+                    if (text.length <= CLIP_CHARS) return;
+                    td.innerHTML = '<span class="nt-clip" title="' + text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;') +
+                        '" aria-expanded="false">' + td.innerHTML + '</span>';
+                });
+            });
+        });
+    }
+
+    document.addEventListener('click', function (e) {
+        var clip = e.target.closest && e.target.closest('.nt-clip');
+        if (!clip || e.target.closest('a')) return; // links inside a clipped cell still work
+        if (window.getSelection && String(window.getSelection())) return; // selecting text to copy
+        var open = clip.classList.toggle('is-open');
+        clip.setAttribute('aria-expanded', open);
+    });
+
     function enhanceTable(table) {
         wrapScroller(table);
         buildFooter(table);
@@ -358,6 +387,8 @@
                 });
             });
         }
+
+        clipLongCells(table);
 
         var scroller = table.closest('.nt-table-scroll, .table-responsive');
         if (scroller) updateEdges(scroller);

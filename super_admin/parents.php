@@ -76,7 +76,9 @@ getFranchise()
                                     <thead>
                                         <tr>
                                             <th>S.No</th>
-                                            <th>Name</th>
+                                            <th>Student Roll No</th>
+                                            <th>Student Name</th>
+                                            <th>Parent Name</th>
                                             <th>Contact</th>
                                             <th>Email</th>
                                             <th>Password</th>
@@ -123,6 +125,14 @@ getFranchise()
         aaSorting: [],
         columns: [{
             data: 'index'
+        },
+        {
+            data: 'student_roll_no',
+            defaultContent: '—'
+        },
+        {
+            data: 'student_name',
+            defaultContent: '—'
         },
         {
             data: 'name'

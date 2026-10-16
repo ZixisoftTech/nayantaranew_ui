@@ -111,11 +111,13 @@ html.nt .nt-brand {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
 }
 
-html.nt .nt-brand-logo { height: 58px; margin-left: -6px; width: auto; display: block; }
+html.nt .nt-brand-link { display: block; }
+html.nt .nt-brand-logo { height: 58px; width: auto; max-width: 100%; display: block; margin: 0 auto; }
 
 html.nt .nt-brand-role {
   font-size: 11px;
@@ -1346,6 +1348,26 @@ html.nt .table .nt-col-action {
 }
 
 html.nt .table thead th.nt-col-action { background: var(--nt-surface-2); z-index: 3; }
+
+/* long cell text: one line with an ellipsis, click to expand (nt-table.js clipLongCells) */
+html.nt .table td .nt-clip {
+  display: block;
+  max-width: 280px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+html.nt .table td .nt-clip.is-open {
+  max-width: 420px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: auto;
+}
+@media (max-width: 767.98px) {
+  html.nt .table td .nt-clip { max-width: 180px; }
+  html.nt .table td .nt-clip.is-open { max-width: 260px; }
+}
 html.nt .table thead th.nt-col-action::before,
 html.nt .table thead th.nt-col-action::after { display: none !important; } /* no sort arrows on Action */
 html.nt .table tbody tr:hover td.nt-col-action { background: #fafbfc; }
@@ -1713,20 +1735,22 @@ html.nt .nt-copy.copied { color: var(--nt-success); }
 
 /* tabs */
 html.nt .nt-tabs-box { margin-bottom: 22px; }
+/* all tabs fit the panel width (no horizontal scroll); wraps only on very narrow screens */
 html.nt .nt-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 2px;
   border-bottom: 1px solid var(--nt-border);
-  overflow-x: auto;
-  scrollbar-width: none;
   margin-bottom: 4px;
+  overflow: visible;
 }
-html.nt .nt-tabs::-webkit-scrollbar { display: none; }
 html.nt .nt-tab {
+  flex: 1 1 auto;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 10px 12px;
+  padding: 10px 8px;
   border: 0;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
@@ -1770,6 +1794,8 @@ html.nt .nt-list-side .nt-list-meta { justify-content: flex-end; font-weight: 40
 html.nt .nt-list-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 28px 0; color: var(--nt-muted); font-size: 13px; }
 html.nt .nt-list-empty i { font-size: 26px; color: var(--nt-subtle); }
 html.nt .nt-list-more { font-size: 12px; color: var(--nt-muted); margin: 8px 0 0; text-align: center; }
+html.nt .nt-list-more-link { display: inline-flex; align-items: center; gap: 2px; margin-left: 8px; font-weight: 600; color: var(--nt-primary-hover); }
+html.nt .nt-list-more-link:hover { text-decoration: underline; }
 html.nt .nt-pill {
   display: inline-block;
   padding: 2px 8px;

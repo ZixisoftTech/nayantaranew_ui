@@ -262,7 +262,8 @@ const fcmToken = async (req, res, callback) => {
                                         const finalRoomId = room_id || ('nayantara_' + id);
 
 
-                                        if (findparent[0].total_talktime == 0 && findstudent[0].total_talktime == 0) {
+                                        // no call once both balances are used up (0 or overdrawn) -- `== 0` let overdrawn accounts keep calling
+                                        if (Number(findparent[0].total_talktime) <= 0 && Number(findstudent[0].total_talktime) <= 0) {
                                             return res.status(200).send({ error: true, message: "Minutes not available" })
                                         } else {
                                             const weekend = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Satuarday"];
@@ -420,7 +421,8 @@ const fcmWebNotification = (req, res, callback) => {
                                     room_id: findFranchise[0].room_id
                                 }
                             };
-                            if (findparent[0].total_talktime == 0 && findstudent[0].total_talktime == 0) {
+                            // no call once both balances are used up (0 or overdrawn) -- `== 0` let overdrawn accounts keep calling
+                            if (Number(findparent[0].total_talktime) <= 0 && Number(findstudent[0].total_talktime) <= 0) {
                                 return res.status(200).send({ error: true, message: "Minutes not available" })
                             }
                             else {
