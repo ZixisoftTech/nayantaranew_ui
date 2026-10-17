@@ -221,10 +221,24 @@ const STUDENT_SELECT = `s.id, s.name, s.student_roll_no, s.contact, s.email, s.f
     FLOOR(s.total_talktime / 60) AS minutes, d.name AS department_name, f.franchiseName AS franchise_name`;
 const STUDENT_SEARCH = ['s.name', 's.student_roll_no', 's.contact', 's.email'];
 
+// dashboard shortcuts: ?balance=zero|low, ?inactive=30 (logged in, no call in that many days)
+function studentStateFilters(req, f) {
+    if (req.query.balance === 'zero') f.sql.push('s.total_talktime <= 0');
+    if (req.query.balance === 'low') f.sql.push('s.total_talktime > 0 AND s.total_talktime < 300');
+    const inactive = intParam(req.query.inactive);
+    if (inactive) {
+        // uncorrelated so it runs once (tbl_callhistory has no index on student_id)
+        f.sql.push(`s.login_status = '1' AND s.id NOT IN (SELECT c.student_id FROM tbl_callhistory c
+                     WHERE c.created_at >= NOW() - INTERVAL ? DAY AND c.student_id IS NOT NULL)`);
+        f.args.push(Math.min(inactive, 3650));
+    }
+    return f;
+}
+
 const adminStudents = list({
     metrics: M.students,
     from: STUDENT_FROM,
-    where: (req) => studentFilters(req, 's'),
+    where: (req) => studentStateFilters(req, studentFilters(req, 's')),
     select: STUDENT_SELECT,
     search: STUDENT_SEARCH,
     order: { index: 's.id', name: 's.name', roll_no: 's.student_roll_no', contact: 's.contact', email: 's.email',

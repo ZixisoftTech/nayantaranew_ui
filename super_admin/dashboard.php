@@ -129,26 +129,29 @@ if (!localStorage.getItem("admintoken")) { //HERE IS NOT WORKING
                         </div>
                         <div class="col-sm-6 col-xl-3">
                             <div class="card mini-stats-wid">
-                                <div class="card-body">
-                                    <div class="media">
-                                        <div class="media-body">
-                                            <p class="text-muted font-weight-medium">Server Time (IST)</p>
-                                            <h4 class="mb-0" id="current_time"></h4>
-                                        </div>
+                                <a href="<?= $basePath ?>/super_admin/students.php?balance=zero">
+                                    <div class="card-body">
+                                        <div class="media">
+                                            <div class="media-body">
+                                                <p class="text-muted font-weight-medium">Zero Balance Students</p>
+                                                <h4 class="mb-0" id="zero_balance"></h4>
+                                            </div>
 
-                                        <div
-                                            class="avatar-sm rounded-circle bg-primary align-self-center mini-stat-icon">
-                                            <span class="avatar-title rounded-circle bg-primary">
-                                                <i class="bx bx-time font-size-24"></i>
-                                            </span>
+                                            <div
+                                                class="avatar-sm rounded-circle bg-primary align-self-center mini-stat-icon">
+                                                <span class="avatar-title rounded-circle bg-primary">
+                                                    <i class="bx bx-error-circle font-size-24"></i>
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                </a>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+            <?php include("../include/dashboard_overview.php"); ?>
             <?php $ntChartsPortal = 'admin'; include("../include/dashboard_charts.php"); ?>
         </div>
     </div>
@@ -238,21 +241,5 @@ if (!localStorage.getItem("admintoken")) { //HERE IS NOT WORKING
         console.error('Request failed');
     };
     getUniqueDevice.send();
-
-    async function getCurrentTime() {
-        const now = new Date();
-        const options = {
-            timeZone: 'Asia/Kolkata',
-            hour12: false
-        };
-        const timeString = now.toLocaleString('en-IN', options).split(', ')[1];
-        const [hourString, minuteString, secondString] = timeString.split(':');
-        const hours = parseInt(hourString);
-        const minutes = parseInt(minuteString);
-        const second = parseInt(secondString);
-        let currentTime = hours + ':' + ('0' + minutes).slice(-2) + ':' + ('0' + second).slice(-2);
-        document.getElementById('current_time').textContent = currentTime;
-    }
-    getCurrentTime();
-    setInterval(getCurrentTime, 1000); // live clock
     </script>
+    <script src="<?= $basePath ?>/assets/admin/js/nt-overview.js?v=1"></script>

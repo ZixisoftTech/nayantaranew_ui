@@ -33,8 +33,8 @@
     <script src="<?= $basePath ?>/assets/admin/js/pages/sweet-alerts.init.js"></script>
     <script src="<?= $basePath ?>/assets/admin/js/app.js"></script>
     <script src="<?= $basePath ?>/assets/admin/js/nt-table.js?v=10"></script>
-    <script src="<?= $basePath ?>/assets/admin/js/nt-lookup.js?v=6"></script>
-    <script src="<?= $basePath ?>/assets/admin/js/nt-forms.js?v=9"></script>
+    <script src="<?= $basePath ?>/assets/admin/js/nt-lookup.js?v=7"></script>
+    <script src="<?= $basePath ?>/assets/admin/js/nt-forms.js?v=10"></script>
     <script src="<?= $basePath ?>/assets/admin/js/nt-metrics.js?v=2"></script>
 
 

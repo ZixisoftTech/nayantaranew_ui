@@ -168,15 +168,34 @@
         return out;
     })();
 
+    // student state filters used by the dashboard's "Needs attention" links (students.php)
+    var STATE_FILTERS = {
+        balance: { zero: 'Balance: zero or below', low: 'Balance: under 5 min' },
+        inactive: function (v) { return /^\d+$/.test(v) ? 'No calls in ' + v + ' days' : null; }
+    };
+    var stateFilters = (function () {
+        var params = new URLSearchParams(location.search);
+        var out = [];
+        Object.keys(STATE_FILTERS).forEach(function (k) {
+            var v = params.get(k);
+            if (!v) return;
+            var def = STATE_FILTERS[k];
+            var label = typeof def === 'function' ? def(v) : def[v];
+            if (label) out.push({ key: k, value: v, label: label });
+        });
+        return out;
+    })();
+
     // inject into every table request before the pages initialise their DataTables
-    if (activeFilters.length && window.jQuery) {
+    if ((activeFilters.length || stateFilters.length) && window.jQuery) {
         window.jQuery(document).on('preXhr.dt', function (e, settings, data) {
             activeFilters.forEach(function (f) { if (!data[f.key]) data[f.key] = f.id; });
+            stateFilters.forEach(function (f) { if (!data[f.key]) data[f.key] = f.value; });
         });
     }
 
     function filterBanner() {
-        if (!activeFilters.length) return;
+        if (!activeFilters.length && !stateFilters.length) return;
         var table = document.querySelector('table.dataTable, table.table');
         var card = table && table.closest('.card');
         var host = card && (card.querySelector('.card-body') || card);
@@ -185,10 +204,12 @@
         bar.className = 'nt-filter-banner';
         bar.innerHTML = '<i class="bx bx-filter-alt"></i><span>Showing results for</span>' + activeFilters.map(function (f) {
             return '<span class="nt-filter-chip" data-type="' + f.type + '" data-id="' + esc(f.id) + '">' + TYPE_META[f.type].label + ' #' + esc(f.id) + '</span>';
+        }).join('') + stateFilters.map(function (f) {
+            return '<span class="nt-filter-chip">' + esc(f.label) + '</span>';
         }).join('') + '<a class="nt-filter-clear" href="' + esc(location.pathname) + '"><i class="bx bx-x"></i>Clear filter</a>';
         host.insertBefore(bar, host.firstChild);
         // resolve ids to names
-        bar.querySelectorAll('.nt-filter-chip').forEach(function (chip) {
+        bar.querySelectorAll('.nt-filter-chip[data-type]').forEach(function (chip) {
             request('/' + chip.getAttribute('data-type') + '/' + chip.getAttribute('data-id')).then(function (d) {
                 var n = d.profile && d.profile.name;
                 if (n) chip.innerHTML = TYPE_META[chip.getAttribute('data-type')].label + ': <a href="#" class="nt-ref" data-nt-type="' +
@@ -705,6 +726,16 @@
         if (m) openRecord(m[1], m[2]);
         syncSearchWithUrl();
         filterBanner();
+        openCreateFromUrl();
+    }
+
+    // ?new=1 (dashboard quick actions) opens the page's "Create" form
+    function openCreateFromUrl() {
+        if (new URLSearchParams(location.search).get('new') !== '1') return;
+        setTimeout(function () {
+            var btn = document.querySelector('.card > .header [data-target=".add"]');
+            if (btn) btn.click();
+        }, 300);
     }
 
     window.NTLookup = { open: openRecord, openSearch: openSearch };

@@ -244,7 +244,7 @@
     function scan(root) {
         var scope = root && root.querySelectorAll ? root : document;
         Array.prototype.forEach.call(scope.querySelectorAll('input, textarea, select'), function (el) {
-            if (el.closest('.nt-palette-root, .nt-panel-root, .nt-dt-footer')) return;
+            if (el.closest('.nt-palette-root, .nt-panel-root, .nt-sheet-root, .nt-dt-footer')) return;
             if (el.tagName === 'SELECT' && el.getAttribute('data-nt-form') === '1') {
                 promptSelect(el, lookup(labelFor(el))); // options may have been re-filled
                 return;
