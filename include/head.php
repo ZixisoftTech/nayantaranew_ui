@@ -37,12 +37,8 @@ require_once __DIR__ . '/config.php'; $basePath = nt_base('https://nayantarabysp
     <link href="<?= $basePath ?>/assets/admin/css/style.css" id="app-style" rel="stylesheet" type="text/css" />
     <link href="<?= $basePath ?>/assets/admin/libs/sweetalert2/sweetalert2.min.css" rel="stylesheet" type="text/css" />
     <link href="<?= $basePath ?>/assets/admin/css/theme.css?v=35" rel="stylesheet" type="text/css" />
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- jQuery is needed here because page scripts run before foot.php. Bootstrap 4 + DataTables load in foot.php;
+         a second Bootstrap (5.x) here took over $.fn.modal, so popups opened from code could not be closed. -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous">
-    </script>
-    <script src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.12.1/js/dataTables.bootstrap5.min.js"></script>
 </head>
