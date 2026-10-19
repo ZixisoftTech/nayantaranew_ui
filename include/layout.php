@@ -1,7 +1,7 @@
 <?php
 /*
  * Shared admin layout: menu definitions + sidebar / topbar renderers.
- * Used by include/navbar.php, franchise_navbar.php, student_navbar.php
+ * Used by include/navbar.php, franchise_navbar.php
  * and the matching sidebar_*.php files.
  */
 
@@ -28,7 +28,6 @@ if (!function_exists('nt_menu')) {
                 'Reports' => [
                     ['transaction_history.php', 'Transactions', 'bx-receipt'],
                     ['call_history.php', 'Call History', 'bx-phone-call'],
-                    ['student_summary.php', 'Student Summary', 'bx-bar-chart-alt-2'],
                 ],
                 'Support' => [
                     ['student_tickets.php', 'Student Tickets', 'bx-support'],
@@ -51,15 +50,6 @@ if (!function_exists('nt_menu')) {
                     ['parent_skip.php', 'Parent Skip Data', 'bx-skip-next'],
                 ],
             ],
-            'student' => [
-                'Overview' => [
-                    ['dashboard.php', 'Dashboard', 'bx-grid-alt'],
-                ],
-                'Activity' => [
-                    ['transaction_history.php', 'Transactions', 'bx-receipt'],
-                    ['call_history.php', 'Call History', 'bx-phone-call'],
-                ],
-            ],
         ];
         return $menus[$role] ?? [];
     }
@@ -69,7 +59,6 @@ if (!function_exists('nt_menu')) {
         return [
             'super_admin' => 'Super Admin',
             'franchise'   => 'Franchise Portal',
-            'student'     => 'Student Portal',
         ][$role] ?? '';
     }
 
@@ -155,7 +144,6 @@ if (!function_exists('nt_menu')) {
                 <h1 class="nt-page-title"><?= htmlspecialchars($title) ?></h1>
             </div>
         </div>
-        <?php if ($role !== 'student'): ?>
         <div class="nt-search" id="nt-search" role="search">
             <button type="button" class="nt-search-trigger" onclick="ntOpenSearch()" aria-label="Search students, parents and more">
                 <i class="bx bx-search"></i>
@@ -163,7 +151,6 @@ if (!function_exists('nt_menu')) {
                 <kbd class="nt-search-kbd">⌘K</kbd>
             </button>
         </div>
-        <?php endif; ?>
         <div class="nt-topbar-right">
             <span class="nt-date d-none d-xl-inline-flex"><i class="bx bx-calendar"></i><span id="nt-today"></span></span>
             <div class="nt-user" id="nt-user">

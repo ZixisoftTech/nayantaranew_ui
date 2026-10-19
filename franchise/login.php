@@ -64,7 +64,7 @@ if (franchisecheck != null) {
                 </script>
                 <button class="login-btn" id="Save" type="submit">Sign in <i class="bx bx-right-arrow-alt"></i></button>
                 </form>
-                <div class="nt-auth-switch">Other portals: <a href="<?= $basePath ?>/">Admin login</a><a href="<?= $basePath ?>/student/login.php">Student login</a></div>
+                <div class="nt-auth-switch">Other portals: <a href="<?= $basePath ?>/">Admin login</a></div>
             </div>
         </main>
     </div>

@@ -3,6 +3,7 @@ const multer = require('multer');
 var FCM = require('fcm-node');
 const axios = require('axios');
 const serviceAccount = require('./service-account.json');
+const { callType, callBlockReason, allowedCallSeconds } = require('../call_rules');
 const { google } = require('googleapis');
 const { TIMEOUT } = require('node:dns');
 
@@ -234,6 +235,7 @@ const fcmToken = async (req, res, callback) => {
             } else {
                 // const { id } = req.body;
                 const { id, room_id } = req.body;
+                const call_type = callType(req.body.call_type);
 
                 const status = 0;
                 if (id == 0) {
@@ -246,10 +248,15 @@ const fcmToken = async (req, res, callback) => {
                                 return res.send({ error: true, message: "incorrect parent Id", data: null })
                             } else {
                                 // return res.status(200).send({ error: true, message: "Student found", data: findparent });
-                                connect.query('SELECT * From tbl_student WHERE id = ?', [findparent[0].student_id], function (error, findstudent, fields) {
+                                connect.query('SELECT * From tbl_student WHERE id = ?', [findparent[0].student_id], async function (error, findstudent, fields) {
                                     if (findstudent == 0) {
                                         return res.status(200).send({ error: true, message: "Student not found", data: null });
                                     } else {
+                                        // school / house rules: audio calls allowed, daily call count and talk time limits
+                                        const blocked = await callBlockReason(findstudent[0].id, call_type);
+                                        if (blocked) {
+                                            return res.status(200).send({ error: true, message: blocked, data: null });
+                                        }
                                         var now = new Date();
                                         var y = now.getFullYear();
                                         var m = now.getMonth();
@@ -304,7 +311,8 @@ const fcmToken = async (req, res, callback) => {
                                                                             },
                                                                             data: {
                                                                                 message: roomId,
-                                                                                type: ""
+                                                                                type: "",
+                                                                                call_type: call_type
                                                                             },
                                                                         },
                                                                     };
@@ -321,8 +329,8 @@ const fcmToken = async (req, res, callback) => {
                                                                             timeout: 10000,
                                                                         });
 
-                                                                        const sql = 'INSERT INTO tbl_callhistory (student_id,student_name,parent_id,parent_name,meeting_link,day,status) VALUES (?)';
-                                                                        const VALUES = [findstudent[0].id, findstudent[0].name, findparent[0].id, findparent[0].name, roomId, day, status];
+                                                                        const sql = 'INSERT INTO tbl_callhistory (student_id,student_name,parent_id,parent_name,meeting_link,day,status,call_type) VALUES (?)';
+                                                                        const VALUES = [findstudent[0].id, findstudent[0].name, findparent[0].id, findparent[0].name, roomId, day, status, call_type];
                                                                         connect.query(sql, [VALUES], function (error, insertcall, fields) {
                                                                             if (insertcall == 0) {
                                                                                 return res.status(200).send({ error: true, message: "meeting link not insert in call history" });
@@ -482,35 +490,23 @@ const jitsyLink = (req, res, next) => {
 
 const callMinute = (req, res, next) => {
     try {
-        Upload(req, res, (err) => {
+        Upload(req, res, async (err) => {
             if (err) {
                 return res.status(401).send({ error: true, message: "Call Minute multer not be working" });
-            } else {
-                const { id } = req.body;
-                const min = '2';
-                if (id == 0) {
-                    return res.status(200).send({ error: true, message: "Please insert the Id" });
-                } else {
-                    connect.query('SELECT * From tbl_student WHERE id = ?', [id], function (error, minute, fields) {
-                        if (minute == 0) {
-                            return res.status(200).send({ error: true, message: "Student not found", data: null });
-                        } else {
-                            const secTime = minute[0].total_talktime;
-                            const computeMinutes = Math.floor(secTime / 60);
-                            const sec = secTime % 60;
-                            const time = computeMinutes + ':' + sec
-                            if (time > min) {
-                                return res.status(200).send({ error: false, message: "This is call minute", data: Number(min) });
-                            } else {
-                                if (computeMinutes < min) {
-                                    return res.status(200).send({ error: false, message: "This is a student available min", data: Number(computeMinutes) });
-                                } else {
-                                    return res.status(200).send({ error: true, message: "call minute and available min are equal", data: Number(computeMinutes) })
-                                }
-                            }
-                        }
-                    })
+            }
+            const { id } = req.body;
+            if (id == 0) {
+                return res.status(200).send({ error: true, message: "Please insert the Id" });
+            }
+            try {
+                // longest call allowed now: balance at the school's rate, the house's max call length and today's allowance left
+                const seconds = await allowedCallSeconds(id, callType(req.body.call_type));
+                if (seconds === undefined) {
+                    return res.status(200).send({ error: true, message: "Student not found", data: null });
                 }
+                return res.status(200).send({ error: false, message: "This is call minute", data: Math.floor(seconds / 60), seconds });
+            } catch (error) {
+                return res.status(400).send({ error: true, message: "Call minute api not be working" });
             }
         })
     } catch (error) {

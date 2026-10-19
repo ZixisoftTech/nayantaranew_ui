@@ -88,10 +88,10 @@ async function getDepartment(t) {
                                     <thead>
                                         <tr>
                                             <th>S. No</th>
-                                            <th>Date</th>
+                                            <th>Date &amp; Time</th>
                                             <th>Student Name</th>
                                             <th>Parent Name</th>
-                                            <th>Minutes</th>
+                                            <th>Duration (mm:ss)</th>
                                         </tr>
                                     </thead>
                                     <tbody id="getCallHistory">

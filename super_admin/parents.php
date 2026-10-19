@@ -127,12 +127,10 @@ getFranchise()
             data: 'index'
         },
         {
-            data: 'student_roll_no',
-            defaultContent: '—'
+            data: 'student_roll_no'
         },
         {
-            data: 'student_name',
-            defaultContent: '—'
+            data: 'student_name'
         },
         {
             data: 'name'

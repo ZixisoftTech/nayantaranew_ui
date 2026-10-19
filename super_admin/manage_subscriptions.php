@@ -175,10 +175,10 @@ async function deleteSubscription(id) {
                                     <thead>
                                         <tr>
                                             <th>S. No</th>
-                                            <th>Franchise Name</th>
+                                            <th>School</th>
                                             <th>Plan Name</th>
-                                            <th>Price</th>
-                                            <th>Talk Time Minutes</th>
+                                            <th>Price (₹)</th>
+                                            <th>Talk Time (min)</th>
                                             <th>Status</th>
                                             <th>Action</th>
                                         </tr>

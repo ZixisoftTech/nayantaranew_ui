@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const axios = require('axios');
 const dataBase = require("../../config/db");
+const { rechargeBlockReason } = require('../call_rules');
 
 const generateTransactionId = () => {
     const timestamp = Date.now();
@@ -13,6 +14,10 @@ const generateTransactionId = () => {
 const phonepePayement = async (req, res) => {
     try {
         const { id, name, number, amount } = req.body;
+        const blocked = await rechargeBlockReason(id);
+        if (blocked) {
+            return res.status(200).json({ error: true, message: blocked, data: null });
+        }
         const data = {
             "merchantId": "PGTESTPAYUAT",
             "merchantTransactionId": generateTransactionId(),

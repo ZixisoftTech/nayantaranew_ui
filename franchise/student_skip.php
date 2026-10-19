@@ -247,7 +247,7 @@ async function deleteStudentSkip(id) {
                                             <th>Contact Number</th>
                                             <th>Email</th>
                                             <th>Password</th>
-                                            <th>Department</th>
+                                            <th>House</th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>

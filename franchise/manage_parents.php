@@ -114,7 +114,7 @@ async function getParents(id) {
                                             <th>Contact</th>
                                             <th>Email</th>
                                             <th>Password</th>
-                                            <th>Action</th>
+                                            <th>Login Status</th>
                                         </tr>
                                     </thead>
                                     <tbody id="getparents">

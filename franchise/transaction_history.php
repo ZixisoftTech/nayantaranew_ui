@@ -106,11 +106,11 @@ async function getStudentName(t) {
                                     <thead>
                                         <tr>
                                             <th>S. No</th>
-                                            <th>Purchse Date</th>
+                                            <th>Purchase Date</th>
                                             <th>Student Name</th>
-                                            <th>Plan name</th>
-                                            <th>Price</th>
-                                            <th>Minutes</th>
+                                            <th>Plan Name</th>
+                                            <th>Price (₹)</th>
+                                            <th>Plan Minutes</th>
                                         </tr>
                                     </thead>
                                     <tbody id="getplans">

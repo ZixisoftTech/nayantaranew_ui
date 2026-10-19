@@ -348,12 +348,16 @@ app.use('/subscription', manageSubscription);
 app.use('/api', phonepePayement);
 app.use('/api', addDepartment);
 app.use('/api', addFranchise);
+app.use('/api', require('./routes/settings_routes'));
+app.use('/api/uploads/franchise', express.static(path.join(__dirname, 'uploads/franchise')));
 app.use('/api', login_message);
 app.use('/api', dashboard);
 app.use('/api', lookup);
 app.use('/api', franchiseDashboard);
 
 app.use("/franchise/api", loginRoutes);
+require('./models/call_rules').startAllotmentJob();
+
 app.listen(port, () => {
     console.log(`Server is running http://${dataBase.config.host}:${port}`);
 })

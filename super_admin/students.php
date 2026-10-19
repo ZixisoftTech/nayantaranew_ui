@@ -125,9 +125,9 @@ async function updateMin() {
                                             <th>Student Roll No</th>
                                             <th>Contact Number</th>
                                             <th>Email</th>
-                                            <th>Avaibale Minutes</th>
-                                            <th>Franchise</th>
-                                            <th>Department</th>
+                                            <th>Available Minutes</th>
+                                            <th>School</th>
+                                            <th>House</th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>

@@ -1,4 +1,81 @@
 const dataBase = require('../../config/db');
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
+const { ensureColumns } = require('../schema');
+
+/*
+ * School settings stored on each franchise. Defaults keep the current behaviour (1 coin/min, no fee,
+ * 0 = no daily limit) until a school is configured. Missing columns are added once at startup so
+ * existing databases pick up the new fields without a manual migration.
+ */
+const SETTINGS_COLUMNS = {
+    logo: 'VARCHAR(255) NULL DEFAULT NULL',
+    allow_parental_recharge: 'TINYINT(1) NOT NULL DEFAULT 1',
+    allow_audio_calls: 'TINYINT(1) NOT NULL DEFAULT 1',
+    video_rate: 'DECIMAL(10,2) NOT NULL DEFAULT 1.00',
+    audio_rate: 'DECIMAL(10,2) NOT NULL DEFAULT 1.00',
+    activation_fee: 'DECIMAL(10,2) NOT NULL DEFAULT 0.00',
+    max_calls_per_day: 'INT(11) NOT NULL DEFAULT 0',
+    daily_duration_min: 'INT(11) NOT NULL DEFAULT 0',
+    min_call_duration_sec: 'INT(11) NOT NULL DEFAULT 30',
+};
+
+ensureColumns('tbl_franchise', SETTINGS_COLUMNS);
+
+/** Validates the school settings in a request body. Returns { values } or { message } on error. */
+const readSettings = (body) => {
+    const values = {};
+    for (const flag of ['allow_parental_recharge', 'allow_audio_calls']) {
+        if (body[flag] !== undefined) values[flag] = (body[flag] === true || body[flag] == 1) ? 1 : 0;
+    }
+    const numbers = {
+        video_rate: { label: 'Video rate', decimal: true },
+        audio_rate: { label: 'Audio rate', decimal: true },
+        activation_fee: { label: 'Parent account activation fee', decimal: true },
+        max_calls_per_day: { label: 'Max calls per day' },
+        daily_duration_min: { label: 'Daily duration allowance' },
+        min_call_duration_sec: { label: 'Min call duration' },
+    };
+    for (const [field, rule] of Object.entries(numbers)) {
+        if (body[field] === undefined || body[field] === '') continue;
+        const value = Number(body[field]);
+        if (!Number.isFinite(value) || value < 0 || (!rule.decimal && !Number.isInteger(value))) {
+            return { message: `${rule.label} must be a ${rule.decimal ? 'positive number' : 'positive whole number'}` };
+        }
+        values[field] = value;
+    }
+    if (body.logo !== undefined) values.logo = body.logo || null;
+    return { values };
+};
+
+const LOGO_DIR = path.join(__dirname, '../../uploads/franchise');
+fs.mkdirSync(LOGO_DIR, { recursive: true });
+
+const logoUpload = multer({
+    storage: multer.diskStorage({
+        destination: (req, file, callBack) => callBack(null, LOGO_DIR),
+        filename: (req, file, callBack) => callBack(null, 'logo-' + Date.now() + path.extname(file.originalname).toLowerCase()),
+    }),
+    limits: { fileSize: 512 * 1024 },
+    fileFilter: (req, file, callBack) => {
+        const ok = ['image/png', 'image/jpeg'].includes(file.mimetype) && ['.png', '.jpg', '.jpeg'].includes(path.extname(file.originalname).toLowerCase());
+        callBack(ok ? null : new Error('Only JPG or PNG images are allowed'), ok);
+    },
+}).single('logo');
+
+const uploadFranchiseLogo = (req, res, next) => {
+    logoUpload(req, res, (error) => {
+        if (error) {
+            const message = error.code === 'LIMIT_FILE_SIZE' ? 'Logo must be 512 KB or smaller' : error.message;
+            return res.status(200).send({ error: true, message, data: null });
+        }
+        if (!req.file) {
+            return res.status(200).send({ error: true, message: "Please choose a logo", data: null });
+        }
+        return res.status(200).send({ error: false, message: "Logo successfully uploaded", data: { logo: 'api/uploads/franchise/' + req.file.filename } });
+    });
+}
 
 const getStateName = async (req, res, next) => {
     try {
@@ -70,11 +147,15 @@ const addFranchise = (req, res, next) => {
         if (franchiseName == 0 || franchiserName == 0 || email == 0 || password == 0 || address == 0 || state == 0 || city == 0 || pincode == 0 || room_id == 0 || by_plan_permision === '') {
             return res.status(401).send({ error: true, message: "Please insert all field" });
         }
+        const settings = readSettings(req.body);
+        if (settings.message) {
+            return res.status(200).send({ error: true, message: settings.message });
+        }
         else {
             dataBase.query('SELECT * From tbl_franchise WHERE email = "' + email + '"', (error, findEmail, fields) => {
                 if (findEmail == 0) {
-                    const Values = [franchiseName, franchiserName, email, password, address, state, city, pincode, room_id, hash, by_plan_permision, remark];
-                    dataBase.query('INSERT INTO tbl_franchise (franchiseName, franchiserName, email, password, address, state, city, pincode, room_id, hash, by_plan_permision, remark) VALUES (?)', [Values], (error, addFranchise, fields) => {
+                    const row = { franchiseName, franchiserName, email, password, address, state, city, pincode, room_id, hash, by_plan_permision, remark, ...settings.values };
+                    dataBase.query('INSERT INTO tbl_franchise SET ?', [row], (error, addFranchise, fields) => {
                         if (addFranchise == 0) {
                             return res.status(200).send({ error: true, message: "Franchise not successfully add", data: null });
                         } else {
@@ -115,9 +196,9 @@ const getFranchise = (request, response, next) => {
 
     var draw = request.query.draw;
 
-    var start = request.query.start;
+    var start = Math.max(0, Number(request.query.start) || 0);
 
-    var length = request.query.length;
+    var length = Math.max(1, Number(request.query.length) || 10);
 
     var order_data = request.query.order;
 
@@ -128,23 +209,28 @@ const getFranchise = (request, response, next) => {
     else {
         var column_index = request.query.order[0]['column'];
 
-        var column_name = request.query.columns[column_index]['data'];
+        // sort by whitelisted SQL columns; the DataTables keys (index, state_name, ...) aren't all real columns
+        var sort_columns = { index: 'tbl_franchise.Id', franchiseName: 'tbl_franchise.franchiseName', franchiserName: 'tbl_franchise.franchiserName', email: 'tbl_franchise.email', password: 'tbl_franchise.password', address: 'tbl_franchise.address', state_name: 'tbl_states.name', cities_name: 'tbl_cities.name', pincode: 'tbl_franchise.pincode', plan_permision: 'tbl_franchise.by_plan_permision', remark: 'tbl_franchise.remark', status: 'tbl_franchise.status' };
 
-        var column_sort_order = request.query.order[0]['dir'];
+        var column_name = sort_columns[request.query.columns[column_index]['data']] || 'tbl_franchise.Id';
+
+        var column_sort_order = request.query.order[0]['dir'] == 'asc' ? 'asc' : 'desc';
     }
 
     //search data
 
-    var search_value = request.query.search['value'];
+    var search_value = dataBase.escape('%' + ((request.query.search && request.query.search['value']) || '') + '%');
 
     var search_query = `
-     (franchiseName LIKE '%${search_value}%' 
-     OR franchiserName LIKE '%${search_value}%'
-     OR email LIKE '%${search_value}%'
-     OR password LIKE '%${search_value}%'
-     OR address LIKE '%${search_value}%'
-     OR pincode LIKE '%${search_value}%'
-     OR room_id LIKE '%${search_value}%'
+     (tbl_franchise.franchiseName LIKE ${search_value} 
+     OR franchiserName LIKE ${search_value}
+     OR tbl_franchise.email LIKE ${search_value}
+     OR password LIKE ${search_value}
+     OR address LIKE ${search_value}
+     OR pincode LIKE ${search_value}
+     OR room_id LIKE ${search_value}
+     OR tbl_states.name LIKE ${search_value}
+     OR tbl_cities.name LIKE ${search_value}
      )
      `;
 
@@ -157,7 +243,7 @@ const getFranchise = (request, response, next) => {
 
         //Total number of records with filtering
 
-        dataBase.query(`SELECT COUNT(*) AS Total FROM tbl_franchise WHERE ${search_query}`, function (error, data) {
+        dataBase.query(`SELECT COUNT(*) AS Total FROM tbl_franchise left join tbl_states ON tbl_states.id = tbl_franchise.state left join tbl_cities ON tbl_cities.id = tbl_franchise.city WHERE ${search_query}`, function (error, data) {
             var total_records_with_filter = data[0].Total;
 
             var query = `
@@ -170,7 +256,7 @@ const getFranchise = (request, response, next) => {
             var data_arr = [];
 
             dataBase.query(query, function (error, data) {
-                data.forEach(function (row, index) {
+                (data || []).forEach(function (row, index) {
 
                     if (row.status == 1) {
                         var statusbtn = '<button onclick="statusChange(' + row.Id + ')" id="active" class="btn-success" value="0">active</button>';
@@ -196,6 +282,7 @@ const getFranchise = (request, response, next) => {
                     data_arr.push({
                         '_ref': { franchise: row.Id },
                         'index': ++start,
+                        'logo': row.logo,
                         'franchiseName': row.franchiseName,
                         'franchiserName': row.franchiserName,
                         'email': row.email,
@@ -251,10 +338,15 @@ const getFranchiseId = (req, res, next) => {
 const editFranchise = (req, res, next) => {
     try {
         const updateData = req.body;
+        const settings = readSettings(updateData);
         if (updateData.id == 0) {
             return res.status(401).send({ error: true, message: "Please insert the ID" });
         }
+        else if (settings.message) {
+            return res.status(200).send({ error: true, message: settings.message });
+        }
         else {
+            Object.assign(updateData, settings.values);
             dataBase.query('UPDATE tbl_franchise SET ? WHERE Id = ?', [updateData, updateData.id], (error, results, fields) => {
                 if (results) {
                     return res.status(200).send({ error: false, message: "Franchise Successfully Update", data: results });
@@ -289,4 +381,4 @@ const statusDeactive = (req, res, next) => {
     }
 }
 
-module.exports = { addFranchise, deleteFranchise, getFranchise, getFranchiseId, editFranchise, getStateName, getCityByStateID, statusDeactive, getPalnPermission };
+module.exports = { uploadFranchiseLogo, addFranchise, deleteFranchise, getFranchise, getFranchiseId, editFranchise, getStateName, getCityByStateID, statusDeactive, getPalnPermission };

@@ -1,5 +1,10 @@
 const multer = require('multer');
 const dataBase = require('../../config/db');
+const { liveName, personName } = require('../lists');
+
+// tickets keep a copy of the parent's name; show the current one (the copy only if the parent was deleted)
+const PARENT_ISSUE_NAME = liveName('tbl_parents.name', 'tbl_parents_issue.parent_name');
+const { callCharge, rechargeBlockReason } = require('../call_rules');
 
 const fileStorage = multer.diskStorage({
     destination: (req, res, cb) => {
@@ -80,7 +85,7 @@ const getSubscription = (req, res, next) => {
 
 const buySubscription = (req, res, next) => {
     try {
-        Upload(req, res, (error) => {
+        Upload(req, res, async (error) => {
             if (error) {
                 return res.status(402).send({ error: true, message: "Multer not we use" });
             } else {
@@ -88,6 +93,10 @@ const buySubscription = (req, res, next) => {
                 if (id == 0 || studentid == 0 || planid == 0) {
                     return res.status(201).send({ error: true, message: "Please insert id,studentid,planid" });
                 } else {
+                    const blocked = await rechargeBlockReason(id);
+                    if (blocked) {
+                        return res.status(200).send({ error: true, message: blocked, data: null });
+                    }
                     dataBase.query('SELECT * From tbl_subscriptions WHERE id = ?', [planid], function (error, findSubscription, fields) {
                         if (findSubscription == 0) {
                             return res.status(202).send({ error: true, message: "Subscription not approved this moment", data: null });
@@ -589,7 +598,9 @@ const parentCallEnd = (req, res, next) => {
                     return res.status(200).send({ error: true, message: "Please insert all field" });
                 }
                 else {
-                    dataBase.query('SELECT * From tbl_callhistory WHERE meeting_link = ?', [meetinglink], function (error, callhistory, fileds) {
+                    dataBase.query('SELECT * From tbl_callhistory WHERE meeting_link = ?', [meetinglink], async function (error, callhistory, fileds) {
+                            // charge = duration x the school's coins/min rate for this call type (1 coin = 1 minute of balance)
+                            const charge = callhistory != 0 ? await callCharge(callhistory[0], availablemin) : 0;
                         if (callhistory == 0) {
                             return res.status(200).send({ error: true, message: "Meetinglink not found", data: null });
                         }
@@ -611,14 +622,14 @@ const parentCallEnd = (req, res, next) => {
                                             }
                                             else {
                                                 // never take a positive balance below 0; an already-negative balance is left as is
-                                                dataBase.query('UPDATE tbl_parents SET total_talktime = IF(total_talktime > 0, GREATEST(total_talktime - ?, 0), total_talktime) WHERE student_id = ?', [Number(availablemin) || 0, callhistory[0].student_id], function (error, updatemin, fields) {
+                                                dataBase.query('UPDATE tbl_parents SET total_talktime = IF(total_talktime > 0, GREATEST(total_talktime - ?, 0), total_talktime) WHERE student_id = ?', [charge, callhistory[0].student_id], function (error, updatemin, fields) {
                                                     if (updatemin) {
                                                         dataBase.query('SELECT * FROM tbl_student WHERE id = "' + parentfound[0].student_id + '"', function (error, studentfound, results) {
                                                             if (studentfound == 0) {
                                                                 return res.status(200).send({ error: true, message: "Student not found", data: null });
                                                             }
                                                             else {
-                                                                dataBase.query('UPDATE tbl_student SET total_talktime = IF(total_talktime > 0, GREATEST(total_talktime - ?, 0), total_talktime) WHERE id = ?', [Number(availablemin) || 0, studentfound[0].id], function (error, Updatemin, fields) {
+                                                                dataBase.query('UPDATE tbl_student SET total_talktime = IF(total_talktime > 0, GREATEST(total_talktime - ?, 0), total_talktime) WHERE id = ?', [charge, studentfound[0].id], function (error, Updatemin, fields) {
                                                                     if (Updatemin) {
                                                                         return res.status(200).send({ error: false, message: "Time Successfully update", data: null });
                                                                     }
@@ -705,7 +716,7 @@ const planPermision = (req, res, next) => {
                         if (findStudent == 0) {
                             return res.status(200).send({ error: true, message: "Parent not found", data: null });
                         } else {
-                            dataBase.query('SELECT id,by_plan_permision From tbl_franchise WHERE Id = "' + findStudent[0].franchise_id + '"', function (error, findFranchise, fields) {
+                            dataBase.query('SELECT Id AS id, by_plan_permision, allow_parental_recharge, allow_audio_calls From tbl_franchise WHERE Id = ?', [findStudent[0].franchise_id], function (error, findFranchise, fields) {
                                 if (findFranchise == 0) {
                                     return res.status(200).send({ error: true, message: "Parent franchise not found", data: null });
                                 } else {
@@ -741,9 +752,9 @@ const getParentIssue = (request, response, next) => {
 
     var draw = request.query.draw;
 
-    var start = request.query.start;
+    var start = Math.max(0, Number(request.query.start) || 0);
 
-    var length = request.query.length;
+    var length = Math.max(1, Number(request.query.length) || 10);
 
     var order_data = request.query.order;
 
@@ -754,19 +765,23 @@ const getParentIssue = (request, response, next) => {
     else {
         var column_index = request.query.order[0]['column'];
 
-        var column_name = request.query.columns[column_index]['data'];
+        // sort by whitelisted SQL columns; 'index' and the joined contact aren't tbl_parents_issue columns
+        var sort_columns = { index: 'tbl_parents_issue.id', parent_name: PARENT_ISSUE_NAME, contact: 'tbl_parents.contact', subject: 'tbl_parents_issue.subject', message: 'tbl_parents_issue.message' };
 
-        var column_sort_order = request.query.order[0]['dir'];
+        var column_name = sort_columns[request.query.columns[column_index]['data']] || 'tbl_parents_issue.id';
+
+        var column_sort_order = request.query.order[0]['dir'] == 'asc' ? 'asc' : 'desc';
     }
 
     //search data
 
-    var search_value = request.query.search['value'];
+    var search_value = dataBase.escape('%' + ((request.query.search && request.query.search['value']) || '') + '%');
 
     var search_query = `
-     AND (parent_name LIKE '%${search_value}%' 
-     OR subject LIKE '%${search_value}%' 
-     OR message LIKE '%${search_value}%'
+     AND (${PARENT_ISSUE_NAME} LIKE ${search_value}
+     OR tbl_parents.contact LIKE ${search_value}
+     OR tbl_parents_issue.subject LIKE ${search_value}
+     OR tbl_parents_issue.message LIKE ${search_value}
      )
      `;
 
@@ -778,12 +793,12 @@ const getParentIssue = (request, response, next) => {
 
         //Total number of records with filtering
 
-        dataBase.query(`SELECT COUNT(*) AS Total FROM tbl_parents_issue WHERE 1 ${search_query}`, function (error, data) {
+        dataBase.query(`SELECT COUNT(*) AS Total FROM tbl_parents_issue LEFT JOIN tbl_parents ON tbl_parents_issue.parent_id = tbl_parents.id WHERE 1 ${search_query}`, function (error, data) {
 
             var total_records_with_filter = data[0].Total;
 
             var query = `
-            SELECT tbl_parents_issue.*, tbl_parents.contact FROM tbl_parents_issue LEFT JOIN tbl_parents ON tbl_parents_issue.parent_id = tbl_parents.id
+            SELECT tbl_parents_issue.*, ${PARENT_ISSUE_NAME} AS name, tbl_parents.contact FROM tbl_parents_issue LEFT JOIN tbl_parents ON tbl_parents_issue.parent_id = tbl_parents.id
             WHERE 1 ${search_query} 
             ORDER BY ${column_name} ${column_sort_order} 
             LIMIT ${start}, ${length}
@@ -792,11 +807,11 @@ const getParentIssue = (request, response, next) => {
             var data_arr = [];
 
             dataBase.query(query, function (error, data) {
-                data.forEach(function (row, index) {
+                (data || []).forEach(function (row, index) {
                     data_arr.push({
                         '_ref': { parent: row.parent_id },
-                        'index': index + 1,
-                        'parent_name': row.parent_name,
+                        'index': Number(start) + index + 1,
+                        'parent_name': personName(row.name),
                         'contact': row.contact,
                         'subject': row.subject,
                         'message': row.message,

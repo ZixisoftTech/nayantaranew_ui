@@ -584,8 +584,8 @@ $(document).on('click', '#close', function() {
                                             <th>Contact Number</th>
                                             <th>Email</th>
                                             <th>Password</th>
-                                            <th>Department</th>
-                                            <th>Status</th>
+                                            <th>House</th>
+                                            <th>Login Status</th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>

@@ -54,6 +54,14 @@
         return esc(d.toLocaleString('en-IN', opts));
     }
 
+    /* a "name" that is only digits (a phone or roll no typed into the name field) is not shown as a name */
+    function realName(v) { return blank(v) || /^[0-9 +]+$/.test(String(v).trim()) ? '' : String(v).trim(); }
+
+    function talkTime(seconds) {
+        var s = Number(seconds) || 0, sign = s < 0 ? '-' : '';
+        s = Math.abs(s);
+        return sign + Math.floor(s / 60) + ' min ' + String(s % 60).padStart(2, '0') + ' sec';
+    }
     function num(v) { return (Number(v) || 0).toLocaleString('en-IN'); }
     function initials(name) {
         return String(name || '?').trim().split(/\s+/).slice(0, 2).map(function (w) { return w[0]; }).join('').toUpperCase() || '?';
@@ -144,10 +152,11 @@
                     return '<a class="nt-menu-item" role="menuitem" href="' + esc(l[2]) + '"><i class="bx ' + l[1] + '"></i><span>' + esc(l[0]) + '</span></a>';
                 }).join('') + '<div class="nt-menu-sep" role="separator"></div>';
             menu.insertAdjacentHTML('afterbegin', extra);
-            return;
+            if (main.type !== 'student') return;
         }
         var table = tr.closest('table');
-        if (table && !table.querySelector('th.nt-col-action') && !tr.classList.contains('nt-row-link')) {
+        // student rows always open the full record on tap; clicks on links, buttons and the menu are ignored
+        if (table && (main.type === 'student' || !table.querySelector('th.nt-col-action')) && !tr.classList.contains('nt-row-link')) {
             tr.classList.add('nt-row-link');
             tr.setAttribute('data-nt-open-type', main.type);
             tr.setAttribute('data-nt-open-id', main.p.id);
@@ -239,6 +248,7 @@
             '  <header class="nt-panel-head">' +
             '    <button type="button" class="nt-icon-btn nt-panel-back" aria-label="Back"><i class="bx bx-arrow-back"></i></button>' +
             '    <div class="nt-panel-kind" id="nt-panel-title">Details</div>' +
+            '    <button type="button" class="nt-icon-btn nt-panel-export" aria-label="Export this record" title="Export (CSV)"><i class="bx bx-download"></i></button>' +
             '    <button type="button" class="nt-icon-btn nt-panel-share" aria-label="Copy link to this record" title="Copy link"><i class="bx bx-link"></i></button>' +
             '    <button type="button" class="nt-icon-btn" data-nt-close aria-label="Close"><i class="bx bx-x"></i></button>' +
             '  </header>' +
@@ -253,6 +263,7 @@
             if (e.target.closest('[data-nt-close]')) { closePanel(); return; }
             if (e.target.closest('.nt-panel-back')) { stack.pop(); var prev = stack.pop(); if (prev) openRecord(prev.type, prev.id); return; }
             if (e.target.closest('.nt-panel-share')) { copyText(location.href, e.target.closest('button')); return; }
+            if (e.target.closest('.nt-panel-export')) { exportRecord(e.target.closest('button')); return; }
             var tab = e.target.closest('.nt-tab');
             if (tab) {
                 var box = tab.closest('.nt-tabs-box');
@@ -291,6 +302,61 @@
             if (token !== stack.length) return;
             panelBody.innerHTML = '<div class="nt-panel-state"><i class="bx bx-error-circle"></i><p>' + esc(err.message) + '</p></div>';
         });
+    }
+
+    /* ------------------------------------------------------------- export */
+
+    var SECTION_TITLES = { parents: 'Parents', calls: 'Calls', plans: 'Plans', payments: 'Payments', tickets: 'Tickets', departments: 'Departments', students: 'Students' };
+
+    function label(key) {
+        return String(key).replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+    }
+
+    function csvCell(v) {
+        if (v === null || v === undefined) return '';
+        var text = String(v);
+        // keep long numbers (phones, roll nos) as text in Excel and neutralise formula injection
+        if (/^[=+\-@]/.test(text) || /^(\d{10,}|0\d+)$/.test(text)) text = '\t' + text;
+        return /[",\n\r\t]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+    }
+
+    function toCsv(type, d) {
+        var lines = [[TYPE_META[type].label + ' export', new Date().toLocaleString('en-IN')], [], ['Details']];
+        Object.keys(d.profile).forEach(function (k) { lines.push([label(k), d.profile[k]]); });
+        if (d.stats) {
+            lines.push([], ['Summary']);
+            Object.keys(d.stats).forEach(function (k) { lines.push([label(k), d.stats[k]]); });
+        }
+        Object.keys(SECTION_TITLES).forEach(function (key) {
+            var rows = d[key];
+            if (!Array.isArray(rows)) return;
+            lines.push([], [SECTION_TITLES[key] + ' (' + rows.length + ')']);
+            if (!rows.length) return;
+            var cols = [];
+            rows.forEach(function (r) { Object.keys(r).forEach(function (c) { if (cols.indexOf(c) < 0) cols.push(c); }); });
+            lines.push(cols.map(label));
+            rows.forEach(function (r) { lines.push(cols.map(function (c) { return r[c]; })); });
+        });
+        return '\ufeff' + lines.map(function (l) { return l.map(csvCell).join(','); }).join('\r\n');
+    }
+
+    function exportRecord(btn) {
+        var current = stack[stack.length - 1];
+        if (!current || btn.disabled) return;
+        btn.disabled = true;
+        request('/' + current.type + '/' + encodeURIComponent(current.id) + '?full=1').then(function (d) {
+            var name = String(d.profile.name || current.id).replace(/[^\w-]+/g, '_');
+            var blob = new Blob([toCsv(current.type, d)], { type: 'text/csv;charset=utf-8' });
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = current.type + '_' + name + '_' + new Date().toISOString().slice(0, 10) + '.csv';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+        }).catch(function (err) {
+            if (window.Swal) Swal.fire('error!', err.message, 'error');
+        }).then(function () { btn.disabled = false; });
     }
 
     function skeleton() {
@@ -350,8 +416,7 @@
             student: A ? [
                 ['Call history', 'bx-phone-call', 'call_history.php?student_id=' + p.id],
                 ['Transactions', 'bx-receipt', 'transaction_history.php?student_id=' + p.id],
-                ['Parents', 'bx-group', 'parents.php?student_id=' + p.id],
-                ['Student summary', 'bx-bar-chart-alt-2', 'student_summary.php?q=' + enc(key)]
+                ['Parents', 'bx-group', 'parents.php?student_id=' + p.id]
             ] : [
                 ['Call history', 'bx-phone-call', 'call_history.php?student_id=' + p.id],
                 ['Transactions', 'bx-receipt', 'transaction_history.php?student_id=' + p.id],
@@ -440,16 +505,24 @@
             var sub = '<span class="nt-chip">Roll ' + show(p.student_roll_no) + copyBtn(p.student_roll_no) + '</span>' +
                 (isAdmin ? ref('franchise', p.franchise_id, p.franchise_name) + '<i class="bx bx-chevron-right"></i>' : '') +
                 ref('department', p.department_id, p.department_name);
-            return hero('student', p.name, sub, statusBadge(p.status == 1)) +
+            return hero('student', realName(p.name) || 'Name missing', sub, statusBadge(p.status == 1)) +
                 stats([['Available min', num(d.stats.available_min)], ['Used min', num(d.stats.used_min)], ['Calls', num(d.stats.calls)], ['Parents', num(d.stats.parents)]]) +
                 gotoSection('student', p) +
                 details([
+                    ['Name', realName(p.name) ? esc(realName(p.name)) : '<span class="nt-empty">—</span> (stored as ' + esc(p.name) + ')'],
+                    ['Roll no', show(p.student_roll_no) + (blank(p.student_roll_no) ? '' : copyBtn(p.student_roll_no))],
                     ['Contact', contact(p.contact)],
                     ['Email', email(p.email)],
-                    ['Device', show(p.device_name)],
+                    ['School', ref('franchise', p.franchise_id, p.franchise_name)],
+                    ['House', ref('department', p.department_id, p.department_name)],
+                    ['Device ID', show(p.device_name)],
+                    ['Status', p.status == 1 ? 'Active' : 'Inactive'],
+                    ['App login', p.login_status == 1 ? 'Logged in' : 'Logged out'],
+                    ['Talk time left', talkTime(p.total_talktime)],
                     ['Validity', show(p.validity)],
                     ['Auto recharge', p.autorecharge == 1 ? 'On' : 'Off'],
-                    ['Joined', fmtDate(p.created_at)]
+                    ['Joined', fmtDate(p.created_at, true)],
+                    ['Last updated', fmtDate(p.updated_at, true)]
                 ]) +
                 tabs([
                     { title: 'Parents', count: d.parents.length, icon: 'bx-group', empty: 'No parents linked',

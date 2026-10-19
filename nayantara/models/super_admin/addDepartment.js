@@ -1,4 +1,51 @@
 const dataBase = require("../../config/db");
+const { ensureColumns } = require("../schema");
+
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+// House settings stored on each department; missing columns are added at startup.
+ensureColumns('tbl_department', {
+    max_call_duration_sec: 'INT(11) NOT NULL DEFAULT 120', // the 2 minute cap the call API used before; 0 = unlimited
+    allotment_day: "VARCHAR(10) NOT NULL DEFAULT 'Sunday'",
+    allotment_time: "TIME NOT NULL DEFAULT '07:00:00'",
+    weekly_video_mins: 'INT(11) NOT NULL DEFAULT 0',
+    weekly_audio_mins: 'INT(11) NOT NULL DEFAULT 0',
+    parent_notice: 'TEXT NULL',
+    student_notice: 'TEXT NULL',
+});
+
+/** Validates the house settings in a request body. Returns { values } or { message } on error. */
+const readHouseSettings = (body) => {
+    const values = {};
+    const numbers = {
+        max_call_duration_sec: 'Max call duration',
+        weekly_video_mins: 'Weekly video mins',
+        weekly_audio_mins: 'Weekly audio mins',
+    };
+    for (const [field, label] of Object.entries(numbers)) {
+        if (body[field] === undefined) continue;
+        const value = body[field] === '' ? 0 : Number(body[field]);
+        if (!Number.isInteger(value) || value < 0) {
+            return { message: `${label} must be a positive whole number` };
+        }
+        values[field] = value;
+    }
+    if (body.allotment_day !== undefined) {
+        if (!DAYS.includes(body.allotment_day)) return { message: 'Please select a valid allotment day' };
+        values.allotment_day = body.allotment_day;
+    }
+    if (body.allotment_time !== undefined) {
+        if (!/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(body.allotment_time)) return { message: 'Please enter a valid allotment time' };
+        values.allotment_time = body.allotment_time;
+    }
+    for (const field of ['parent_notice', 'student_notice']) {
+        if (body[field] === undefined) continue;
+        const notice = String(body[field]).trim();
+        if (notice.length > 2000) return { message: 'Notices can be at most 2000 characters' };
+        values[field] = notice || null;
+    }
+    return { values };
+};
 
 const getFranchise = (req, res, next) => {
     try {
@@ -20,9 +67,13 @@ const addDepartment = (req, res, next) => {
         const department = req.body.department;
         if (data.franchise_id == 0 || data.name == 0 || data.device_name == 0) {
             return res.status(200).send({ error: true, message: "Please insert franchise,department and deviceName" });
+        }
+        const settings = readHouseSettings(data);
+        if (settings.message) {
+            return res.status(200).send({ error: true, message: settings.message });
         } else {
-            const value = [data.franchise_id, data.name, data.device_name];
-            dataBase.query('INSERT INTO tbl_department (franchise_id,name,device_name) VALUES (?)', [value], function (error, results, fields) {
+            const row = { franchise_id: data.franchise_id, name: data.name, device_name: data.device_name, ...settings.values };
+            dataBase.query('INSERT INTO tbl_department SET ?', [row], function (error, results, fields) {
                 if (results == 0) {
                     return res.status(200).send({ error: true, message: "department not insert", data: null })
                 }
@@ -231,9 +282,13 @@ const editDepartment = (req, res, next) => {
         if (data.id == 0 || data.franchise_id == 0 || data.department_Name == 0 || data.device_name == 0) {
             return res.send(200).send({ error: true, message: "Please insert the all field" });
         }
+        const settings = readHouseSettings(data);
+        if (settings.message) {
+            return res.status(200).send({ error: true, message: settings.message });
+        }
         else {
-            const value = [data.name, data.device_name, data.franchise_id];
-            dataBase.query('UPDATE tbl_department SET `name`="' + data.name + '",`device_name` = "' + data.device_name + '", `franchise_id`="' + data.franchise_id + '" WHERE id = "' + data.id + '"', [value], function (error, results, fields) {
+            const row = { name: data.name, device_name: data.device_name, franchise_id: data.franchise_id, ...settings.values };
+            dataBase.query('UPDATE tbl_department SET ? WHERE id = ?', [row, data.id], function (error, results, fields) {
                 if (results == 0) {
                     return res.status(401).send({ error: true, message: "data not update", data: null })
                 } else {

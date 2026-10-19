@@ -1,5 +1,6 @@
 const dataBase = require('../../config/db');
 const jwt = require('jsonwebtoken');
+const { activateParent } = require('../call_rules');
 const multer = require('multer');
 const { default: axios } = require("axios");
 const FlexApiBase = require('twilio/lib/rest/FlexApiBase');
@@ -62,6 +63,8 @@ const Parentlogin = (req, res, next) => {
                                 if (parentfind[0].contact == '9754764248' || parentfind[0].contact == '8839608504' || parentfind[0].contact == '9301778530') {
                                     dataBase.query('UPDATE tbl_parents set status = ?,fcm_token = ? WHERE contact = ?', [status, fcmtoken, contact], function (error, results, fields) {
                                         if (results) {
+                                            // first login activates the account and charges the school's activation fee once
+                                            activateParent(parentfind[0]);
                                             return res.status(200).send({ error: false, message: "You are successfully login", data: parentfind[0] });
                                         }
                                         else {
@@ -74,6 +77,8 @@ const Parentlogin = (req, res, next) => {
                                     } else {
                                         dataBase.query('UPDATE tbl_parents set status = ?,fcm_token = ? WHERE contact = ?', [status, fcmtoken, contact], function (error, results, fields) {
                                             if (results) {
+                                                // first login activates the account and charges the school's activation fee once
+                                                activateParent(parentfind[0]);
                                                 return res.status(200).send({ error: false, message: "You are successfully login", data: parentfind[0] });
                                             }
                                             else {

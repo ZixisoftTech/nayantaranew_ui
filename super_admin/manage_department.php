@@ -10,6 +10,53 @@ require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('https://na
 // $path = "http://65.0.164.127:8000"; 
 $path = nt_api('https://nayantarabyspacs.co.in');
 
+// House settings shared by the add ($p = '') and edit ($p = 'update') modals.
+function houseSettingsFields($p)
+{
+    ?>
+    <div class="form-group col-md-12">
+        <label>Max Call Duration Allowed (in Seconds)</label>
+        <input type="number" min="0" step="1" name="<?= $p ?>max_call_duration_sec" id="<?= $p ?>max_call_duration_sec" value="120" class="form-control" placeholder="e.g. 300 (5 mins), leave blank or 0 for unlimited">
+        <small class="text-muted">Automatically disconnects single calls when reached and displays a limit notification to student and parent.</small>
+    </div>
+    <div class="col-12">
+        <hr>
+        <h6 class="mb-3">🔄 Automatic Minute Allotment Schedule</h6>
+    </div>
+    <div class="form-group col-md-3">
+        <label>Allotment Day</label>
+        <select name="<?= $p ?>allotment_day" id="<?= $p ?>allotment_day" class="form-control" onchange="updateAllotmentHint('<?= $p ?>')">
+            <?php foreach (['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as $d): ?>
+            <option value="<?= $d ?>">Every <?= $d ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="form-group col-md-3">
+        <label>Time (India IST)</label>
+        <input type="time" name="<?= $p ?>allotment_time" id="<?= $p ?>allotment_time" value="07:00" class="form-control" onchange="updateAllotmentHint('<?= $p ?>')">
+    </div>
+    <div class="form-group col-md-3">
+        <label>Weekly Video Mins</label>
+        <input type="number" min="0" step="1" name="<?= $p ?>weekly_video_mins" id="<?= $p ?>weekly_video_mins" value="0" class="form-control">
+    </div>
+    <div class="form-group col-md-3">
+        <label>Weekly Audio Mins</label>
+        <input type="number" min="0" step="1" name="<?= $p ?>weekly_audio_mins" id="<?= $p ?>weekly_audio_mins" value="0" class="form-control">
+    </div>
+    <div class="col-12 mb-3">
+        <small class="text-muted" id="<?= $p ?>allotmentHint"></small>
+    </div>
+    <div class="form-group col-md-6">
+        <label class="d-flex justify-content-between">Parent Side Notice <small class="text-muted" id="<?= $p ?>parent_noticeCount">0 / 2000</small></label>
+        <textarea rows="3" maxlength="2000" name="<?= $p ?>parent_notice" id="<?= $p ?>parent_notice" class="form-control" placeholder="Notice visible on Parent App dashboard for students of this house..." oninput="updateNoticeCount(this)"></textarea>
+    </div>
+    <div class="form-group col-md-6">
+        <label class="d-flex justify-content-between">Student Side Notice <small class="text-muted" id="<?= $p ?>student_noticeCount">0 / 2000</small></label>
+        <textarea rows="3" maxlength="2000" name="<?= $p ?>student_notice" id="<?= $p ?>student_notice" class="form-control" placeholder="Notice visible on Student App login screen for tablets assigned to this house..." oninput="updateNoticeCount(this)"></textarea>
+    </div>
+    <?php
+}
+
 ?>
 
 <script type="text/javascript">
@@ -107,6 +154,43 @@ async function statusActive(id) {
 }
 
 
+function generateDeviceId(p) {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let id = 'DEV-';
+    for (let i = 0; i < 6; i++) id += chars[Math.floor(Math.random() * chars.length)];
+    document.getElementById(p + 'device_name').value = id;
+}
+
+function updateAllotmentHint(p) {
+    const day = document.getElementById(p + 'allotment_day').value;
+    const time = document.getElementById(p + 'allotment_time').value || '07:00';
+    const [h, m] = time.split(':').map(Number);
+    const label = `${String(h % 12 || 12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+    document.getElementById(p + 'allotmentHint').textContent =
+        `Automatically converted to Spacs Coins and credited to students of this house every ${day.toLowerCase()} at ${label} IST.`;
+}
+
+function updateNoticeCount(el) {
+    document.getElementById(el.id + 'Count').textContent = `${el.value.length} / 2000`;
+}
+
+function houseSettingsPayload(p) {
+    return {
+        max_call_duration_sec: document.getElementById(p + 'max_call_duration_sec').value.trim(),
+        allotment_day: document.getElementById(p + 'allotment_day').value,
+        allotment_time: document.getElementById(p + 'allotment_time').value,
+        weekly_video_mins: document.getElementById(p + 'weekly_video_mins').value.trim(),
+        weekly_audio_mins: document.getElementById(p + 'weekly_audio_mins').value.trim(),
+        parent_notice: document.getElementById(p + 'parent_notice').value,
+        student_notice: document.getElementById(p + 'student_notice').value,
+    }
+}
+
+$(document).ready(function() {
+    updateAllotmentHint('');
+    updateAllotmentHint('update');
+});
+
 async function getFranchiseName() {
     let getName = await fetch('<?= $path ?>/api/get-franchiseid');
     getName = await getName.json();
@@ -143,6 +227,18 @@ async function getUpdateValue(id) {
     // document.getElementById('updatedepartment_Id').value = get.data.department[0].id;
     document.getElementById("updatedepartment_Name").value = get.data.department[0].name;
     document.getElementById("updatedevice_name").value = get.data.department[0].device_name;
+    const house = get.data.department[0];
+    document.getElementById("updatemax_call_duration_sec").value = house.max_call_duration_sec ?? 120;
+    document.getElementById("updateallotment_day").value = house.allotment_day || 'Sunday';
+    document.getElementById("updateallotment_time").value = (house.allotment_time || '07:00').slice(0, 5);
+    document.getElementById("updateweekly_video_mins").value = house.weekly_video_mins ?? 0;
+    document.getElementById("updateweekly_audio_mins").value = house.weekly_audio_mins ?? 0;
+    ['parent_notice', 'student_notice'].forEach((field) => {
+        const el = document.getElementById("update" + field);
+        el.value = house[field] || '';
+        updateNoticeCount(el);
+    });
+    updateAllotmentHint('update');
     document.getElementById("updatefranchise_id").value = get.data.department[0].franchise_name;
 
     document.getElementById("updateStart_time1").value = get.data.timeslots[0].start_time;
@@ -231,6 +327,7 @@ $(document).on('submit', '#addDepartment', function(e) {
         name: document.getElementById("department_Name").value.trim(),
         device_name: document.getElementById("device_name").value.trim(),
         franchise_id: document.getElementById("franchise_id").value.trim(),
+        ...houseSettingsPayload(''),
         department: [{
                 day: document.getElementById("day1").value.trim(),
                 start_time: document.getElementById("start_time1").value.trim(),
@@ -373,6 +470,7 @@ $(document).on('submit', '#updateDepartment', function(e) {
         name: document.getElementById("updatedepartment_Name").value.trim(),
         device_name: document.getElementById("updatedevice_name").value.trim(),
         franchise_id: document.getElementById("updatefranchise_id").value.trim(),
+        ...houseSettingsPayload('update'),
         department: [{
                 day: document.getElementById("updateday1").value.trim(),
                 start_time: document.getElementById("updateStart_time1").value.trim(),
@@ -533,10 +631,10 @@ $(document).on('submit', '#updateDepartment', function(e) {
                                     <thead>
                                         <tr>
                                             <th>S. No</th>
-                                            <th>Department Id</th>
-                                            <th>Department Name</th>
-                                            <th>Device Name</th>
-                                            <th>Franchise Name</th>
+                                            <th>ID</th>
+                                            <th>House Name</th>
+                                            <th>Device ID</th>
+                                            <th>School</th>
                                             <th>Status</th>
                                             <th>Action</th>
                                         </tr>
@@ -569,17 +667,27 @@ $(document).on('submit', '#updateDepartment', function(e) {
                     <div class="modal-body">
                         <div class="row">
                             <div class="form-group col-md-4">
-                                <label>Department Name</label>
-                                <input type="text" name="department_Name" id="department_Name" class="form-control">
+                                <label>House Tag / Name<span class="req" style="color:red">*</span></label>
+                                <input type="text" name="department_Name" id="department_Name" maxlength="25" class="form-control" placeholder="e.g. Alpha House, Gryffindor">
                             </div>
                             <div class="form-group col-md-4">
-                                <label>Device Name</label>
-                                <input type="text" name="device_name" id="device_name" class="form-control">
+                                <label>Hardware Device ID / House ID<span class="req" style="color:red">*</span></label>
+                                <div class="input-group">
+                                    <input type="text" name="device_name" id="device_name" maxlength="50" class="form-control">
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary" onclick="generateDeviceId('')">Generate</button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="form-group col-md-4">
                                 <label>Franchise Name</label>
                                 <select name="franchise_id" id="franchise_id" class="form-control">
                                 </select>
+                            </div>
+                            <?php houseSettingsFields(''); ?>
+                            <div class="col-12">
+                                <hr>
+                                <h6 class="mb-3">Calling Schedule</h6>
                             </div>
                             <div class="form-group col-md-6">
                                 <label>Day</label>
@@ -812,20 +920,30 @@ $(document).on('submit', '#updateDepartment', function(e) {
                                     class="form-control" disabled>
                             </div> -->
                             <div class="form-group col-md-4">
-                                <label>Department Name</label>
-                                <input type="text" name="updatedepartment_Name" id="updatedepartment_Name"
-                                    class="form-control">
+                                <label>House Tag / Name<span class="req" style="color:red">*</span></label>
+                                <input type="text" name="updatedepartment_Name" id="updatedepartment_Name" maxlength="25"
+                                    class="form-control" placeholder="e.g. Alpha House, Gryffindor">
                             </div>
 
                             <div class="form-group col-md-4">
-                                <label>Device Name</label>
-                                <input type="text" name="updatedevice_name" id="updatedevice_name" class="form-control">
+                                <label>Hardware Device ID / House ID<span class="req" style="color:red">*</span></label>
+                                <div class="input-group">
+                                    <input type="text" name="updatedevice_name" id="updatedevice_name" maxlength="50" class="form-control">
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary" onclick="generateDeviceId('update')">Generate</button>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="form-group col-md-4">
                                 <label>Franchise Name</label>
                                 <select name="updatefranchise_id" id="updatefranchise_id" class="form-control">
                                 </select>
+                            </div>
+                            <?php houseSettingsFields('update'); ?>
+                            <div class="col-12">
+                                <hr>
+                                <h6 class="mb-3">Calling Schedule</h6>
                             </div>
 
                             <div class="form-group col-md-6">

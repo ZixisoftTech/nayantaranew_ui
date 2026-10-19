@@ -1,4 +1,5 @@
 const dataBase = require('../../config/db');
+const { personName } = require('../lists');
 
 const addStudents = (req, res, next) => {
     try {
@@ -824,15 +825,22 @@ const getTarnsactionByStudentId = (request, response, next) => {
     }
 };
 
+// tbl_parentskip.student_id is the roll no from the uploaded file when no such student existed, and the
+// student's id when the student was found but the parent was a duplicate. Show the roll no either way.
+const PARENT_SKIP_FROM = `tbl_parentskip
+    LEFT JOIN tbl_student skip_s ON skip_s.id = tbl_parentskip.student_id AND skip_s.franchise_id = tbl_parentskip.franchise_id
+        AND NOT EXISTS (SELECT 1 FROM tbl_student r WHERE r.franchise_id = tbl_parentskip.franchise_id AND r.student_roll_no = tbl_parentskip.student_id)`;
+const PARENT_SKIP_ROLL = 'COALESCE(skip_s.student_roll_no, tbl_parentskip.student_id)';
+
 const getStudentsByFranchise = (request, response, next) => {
 
-    const id = request.params.id;
+    const id = Number(request.params.id) || 0;
 
     var draw = request.query.draw;
 
-    var start = request.query.start;
+    var start = Math.max(0, Number(request.query.start) || 0);
 
-    var length = request.query.length;
+    var length = Math.max(1, Number(request.query.length) || 10);
 
     var order_data = request.query.order;
 
@@ -844,21 +852,24 @@ const getStudentsByFranchise = (request, response, next) => {
     else {
         var column_index = request.query.order[0]['column'];
 
-        var column_name = request.query.columns[column_index]['data'];
+        // sort by whitelisted SQL columns; the DataTables keys (index, student_name, ...) aren't all real columns
+        var sort_columns = { index: 'tbl_student.id', student_name: 'tbl_student.name', student_roll_no: 'tbl_student.student_roll_no', contact: 'tbl_student.contact', email: 'tbl_student.email', password: 'tbl_student.password', department_name: 'tbl_department.name', status: 'tbl_student.login_status' };
 
-        var column_sort_order = request.query.order[0]['dir'];
+        var column_name = sort_columns[request.query.columns[column_index]['data']] || 'tbl_student.id';
+
+        var column_sort_order = request.query.order[0]['dir'] == 'asc' ? 'asc' : 'desc';
     }
 
     //search data
 
-    var search_value = request.query.search['value'];
+    var search_value = dataBase.escape('%' + ((request.query.search && request.query.search['value']) || '') + '%');
 
     var search_query = `
-     AND (tbl_student.name LIKE '%${search_value}%' 
-     OR tbl_student.student_roll_no LIKE '%${search_value}%'
-     OR tbl_student.email LIKE '%${search_value}%'
-     OR tbl_student.contact LIKE '%${search_value}%'
-     OR tbl_student.password LIKE '%${search_value}%'
+     AND (tbl_student.name LIKE ${search_value} 
+     OR tbl_student.student_roll_no LIKE ${search_value}
+     OR tbl_student.email LIKE ${search_value}
+     OR tbl_student.contact LIKE ${search_value}
+     OR tbl_student.password LIKE ${search_value}
      )
     `;
 
@@ -905,10 +916,10 @@ const getStudentsByFranchise = (request, response, next) => {
                         '_ref': { student: row.id, department: row.department_id },
                         'index': ++start,
                         'checkbox': `<input type="checkbox" value="${row.id}" class="checkbox" data-id="${row.id}"></input>`,
-                        'student_name': row.name,
+                        'student_name': personName(row.name, row.student_roll_no),
                         'student_roll_no': row.student_roll_no,
-                        'contact': row.contact ? row.contact : "null",
-                        'email': row.email ? row.email : "null",
+                        'contact': row.contact || null,
+                        'email': row.email || null,
                         'password': row.password,
                         'department_name': row.department_name,
                         'status': statusbtn,
@@ -935,13 +946,13 @@ const getStudentsByFranchise = (request, response, next) => {
 
 const getStudentsSkipByFranchise = (request, response, next) => {
 
-    const id = request.params.id;
+    const id = Number(request.params.id) || 0;
 
     var draw = request.query.draw;
 
-    var start = request.query.start;
+    var start = Math.max(0, Number(request.query.start) || 0);
 
-    var length = request.query.length;
+    var length = Math.max(1, Number(request.query.length) || 10);
 
     var order_data = request.query.order;
 
@@ -953,22 +964,25 @@ const getStudentsSkipByFranchise = (request, response, next) => {
     else {
         var column_index = request.query.order[0]['column'];
 
-        var column_name = request.query.columns[column_index]['data'];
+        // sort by whitelisted SQL columns; the DataTables keys (index, student_name, ...) aren't all real columns
+        var sort_columns = { index: 'tbl_studentskip.id', student_roll_no: 'tbl_studentskip.student_roll_no', student_name: 'tbl_studentskip.name', contact: 'tbl_studentskip.contact', email: 'tbl_studentskip.email', password: 'tbl_studentskip.password', department: 'tbl_department.name' };
 
-        var column_sort_order = request.query.order[0]['dir'];
+        var column_name = sort_columns[request.query.columns[column_index]['data']] || 'tbl_studentskip.id';
+
+        var column_sort_order = request.query.order[0]['dir'] == 'asc' ? 'asc' : 'desc';
     }
 
     //search data
 
-    var search_value = request.query.search['value'];
+    var search_value = dataBase.escape('%' + ((request.query.search && request.query.search['value']) || '') + '%');
 
     var search_query = `
-     AND (tbl_studentskip.name LIKE '%${search_value}%' 
-     OR tbl_studentskip.student_roll_no LIKE '%${search_value}%'
-     OR tbl_studentskip.email LIKE '%${search_value}%'
-     OR tbl_studentskip.contact LIKE '%${search_value}%'
-     OR tbl_studentskip.password LIKE '%${search_value}%'
-     OR tbl_studentskip.department_id LIKE '%${search_value}%'
+     AND (tbl_studentskip.name LIKE ${search_value} 
+     OR tbl_studentskip.student_roll_no LIKE ${search_value}
+     OR tbl_studentskip.email LIKE ${search_value}
+     OR tbl_studentskip.contact LIKE ${search_value}
+     OR tbl_studentskip.password LIKE ${search_value}
+     OR tbl_department.name LIKE ${search_value}
      )
     `;
 
@@ -980,12 +994,12 @@ const getStudentsSkipByFranchise = (request, response, next) => {
 
         //Total number of records with filtering
 
-        dataBase.query(`SELECT COUNT(*) AS Total FROM tbl_studentskip WHERE tbl_studentskip.franchise_id = ${id} ${search_query}`, function (error, data) {
+        dataBase.query(`SELECT COUNT(*) AS Total FROM tbl_studentskip LEFT JOIN tbl_department ON tbl_department.id = tbl_studentskip.department_id WHERE tbl_studentskip.franchise_id = ${id} ${search_query}`, function (error, data) {
 
             var total_records_with_filter = data[0].Total;
 
             var query = `
-            SELECT * FROM tbl_studentskip WHERE tbl_studentskip.franchise_id = ${id} ${search_query} 
+            SELECT tbl_studentskip.*, tbl_department.name AS department_name FROM tbl_studentskip LEFT JOIN tbl_department ON tbl_department.id = tbl_studentskip.department_id WHERE tbl_studentskip.franchise_id = ${id} ${search_query} 
             ORDER BY ${column_name} ${column_sort_order} 
             LIMIT ${start}, ${length}
             `;
@@ -1005,11 +1019,11 @@ const getStudentsSkipByFranchise = (request, response, next) => {
                         'index': ++start,
                         'checkbox': `<input type="checkbox" value="${row.id}" class="checkbox" data-id="${row.id}"></input>`,
                         'student_roll_no': row.student_roll_no,
-                        'student_name': row.name,
-                        'contact': row.contact ? row.contact : "null",
-                        'email': row.email ? row.email : "null",
+                        'student_name': personName(row.name, row.student_roll_no),
+                        'contact': row.contact || null,
+                        'email': row.email || null,
                         'password': row.password,
-                        'department': row.department_id,
+                        'department': row.department_name,
                         'action': action,
                     });
                 });
@@ -1033,13 +1047,13 @@ const getStudentsSkipByFranchise = (request, response, next) => {
 
 const getParentsByFranchise = (request, response, next) => {
 
-    const id = request.params.id;
+    const id = Number(request.params.id) || 0;
 
     var draw = request.query.draw;
 
-    var start = request.query.start;
+    var start = Math.max(0, Number(request.query.start) || 0);
 
-    var length = request.query.length;
+    var length = Math.max(1, Number(request.query.length) || 10);
 
     var order_data = request.query.order;
 
@@ -1051,22 +1065,25 @@ const getParentsByFranchise = (request, response, next) => {
     else {
         var column_index = request.query.order[0]['column'];
 
-        var column_name = request.query.columns[column_index]['data'];
+        // sort by whitelisted SQL columns; the DataTables keys (index, student_name, ...) aren't all real columns
+        var sort_columns = { index: 'tbl_parents.id', student_roll_no: 'tbl_student.student_roll_no', student_name: 'tbl_student.name', name: 'tbl_parents.name', contact: 'tbl_parents.contact', email: 'tbl_parents.email', password: 'tbl_parents.password', action: 'tbl_parents.status' };
 
-        var column_sort_order = request.query.order[0]['dir'];
+        var column_name = sort_columns[request.query.columns[column_index]['data']] || 'tbl_parents.id';
+
+        var column_sort_order = request.query.order[0]['dir'] == 'asc' ? 'asc' : 'desc';
     }
 
     //search data
 
-    var search_value = request.query.search['value'];
+    var search_value = dataBase.escape('%' + ((request.query.search && request.query.search['value']) || '') + '%');
 
     var search_query = `
-     AND (tbl_parents.name LIKE '%${search_value}%'
-     OR tbl_parents.contact LIKE '%${search_value}%'
-     OR tbl_parents.email LIKE '%${search_value}%'
-     OR tbl_parents.password LIKE '%${search_value}%'
-     OR tbl_student.student_roll_no LIKE '%${search_value}%'
-     OR tbl_student.name LIKE '%${search_value}%'
+     AND (tbl_parents.name LIKE ${search_value}
+     OR tbl_parents.contact LIKE ${search_value}
+     OR tbl_parents.email LIKE ${search_value}
+     OR tbl_parents.password LIKE ${search_value}
+     OR tbl_student.student_roll_no LIKE ${search_value}
+     OR tbl_student.name LIKE ${search_value}
      )
     `;
 
@@ -1080,7 +1097,7 @@ const getParentsByFranchise = (request, response, next) => {
 
         dataBase.query(`SELECT COUNT(*) AS Total
         FROM tbl_parents
-        INNER JOIN tbl_student ON tbl_parents.student_id = tbl_student.id
+        LEFT JOIN tbl_student ON tbl_parents.student_id = tbl_student.id
         WHERE tbl_parents.franchise_id = ${id} ${search_query}`, function (error, data) {
             var total_records_with_filter = data[0].Total;
 
@@ -1103,18 +1120,16 @@ const getParentsByFranchise = (request, response, next) => {
                     response.json(output);
                 } else {
                     data.forEach(function (row, index) {
-                        if (row.status == 1) {
-                            var statusbtn = '<button class="btn-success">is logined</button>';
-                        } else {
-                            var statusbtn = '<button class="btn-danger">is not logined</button>';
-                        }
-                        var status = row.status == 1 ? "is logined" : "is not logined"
+                        // a read-only login state, shown under "Login Status" (it was an unclickable button in the Action menu)
+                        var statusbtn = row.status == 1
+                            ? '<span class="nt-badge nt-badge-success">Logged in</span>'
+                            : '<span class="nt-badge nt-badge-muted">Not logged in</span>';
                         data_arr.push({
                             '_ref': { name: 'parent', parent: row.id, student: row.student_id },
                             'index': ++start,
                             'student_roll_no': row.roll_no,
-                            'student_name': row.student_name,
-                            'name': row.name,
+                            'student_name': personName(row.student_name, row.roll_no),
+                            'name': personName(row.name),
                             'contact': row.contact,
                             'email': row.email,
                             'password': row.password,
@@ -1141,13 +1156,13 @@ const getParentsByFranchise = (request, response, next) => {
 
 const getParentsSkipByFranchise = (request, response, next) => {
 
-    const id = request.params.id;
+    const id = Number(request.params.id) || 0;
 
     var draw = request.query.draw;
 
-    var start = request.query.start;
+    var start = Math.max(0, Number(request.query.start) || 0);
 
-    var length = request.query.length;
+    var length = Math.max(1, Number(request.query.length) || 10);
 
     var order_data = request.query.order;
 
@@ -1159,21 +1174,24 @@ const getParentsSkipByFranchise = (request, response, next) => {
     else {
         var column_index = request.query.order[0]['column'];
 
-        var column_name = request.query.columns[column_index]['data'];
+        // sort by whitelisted SQL columns; the DataTables keys (index, student_name, ...) aren't all real columns
+        var sort_columns = { index: 'tbl_parentskip.id', student_roll_no: PARENT_SKIP_ROLL, name: 'tbl_parentskip.name', contact: 'tbl_parentskip.contact', email: 'tbl_parentskip.email', password: 'tbl_parentskip.password' };
 
-        var column_sort_order = request.query.order[0]['dir'];
+        var column_name = sort_columns[request.query.columns[column_index]['data']] || 'tbl_parentskip.id';
+
+        var column_sort_order = request.query.order[0]['dir'] == 'asc' ? 'asc' : 'desc';
     }
 
     //search data
 
-    var search_value = request.query.search['value'];
+    var search_value = dataBase.escape('%' + ((request.query.search && request.query.search['value']) || '') + '%');
 
     var search_query = `
-     AND (tbl_parentskip.name LIKE '%${search_value}%'
-     OR tbl_parentskip.contact LIKE '%${search_value}%'
-     OR tbl_parentskip.email LIKE '%${search_value}%'
-     OR tbl_parentskip.password LIKE '%${search_value}%'
-     OR tbl_parentskip.student_id LIKE '%${search_value}%'
+     AND (tbl_parentskip.name LIKE ${search_value}
+     OR tbl_parentskip.contact LIKE ${search_value}
+     OR tbl_parentskip.email LIKE ${search_value}
+     OR tbl_parentskip.password LIKE ${search_value}
+     OR ${PARENT_SKIP_ROLL} LIKE ${search_value}
      )
     `;
 
@@ -1185,12 +1203,12 @@ const getParentsSkipByFranchise = (request, response, next) => {
 
         //Total number of records with filtering
 
-        dataBase.query(`SELECT COUNT(*) AS Total FROM tbl_parentskip WHERE tbl_parentskip.franchise_id = ${id} ${search_query}`, function (error, data) {
+        dataBase.query(`SELECT COUNT(*) AS Total FROM ${PARENT_SKIP_FROM} WHERE tbl_parentskip.franchise_id = ${id} ${search_query}`, function (error, data) {
 
             var total_records_with_filter = data[0].Total;
 
             var query = `
-            SELECT * FROM tbl_parentskip WHERE tbl_parentskip.franchise_id = ${id} ${search_query} 
+            SELECT tbl_parentskip.*, ${PARENT_SKIP_ROLL} AS roll_no FROM ${PARENT_SKIP_FROM} WHERE tbl_parentskip.franchise_id = ${id} ${search_query} 
             ORDER BY ${column_name} ${column_sort_order} 
             LIMIT ${start}, ${length}
             `;
@@ -1217,7 +1235,7 @@ const getParentsSkipByFranchise = (request, response, next) => {
                         data_arr.push({
                             'index': ++start,
                             'checkbox': `<input type="checkbox" value="${row.id}" class="checkbox" data-id="${row.id}"></input>`,
-                            'student_roll_no': row.student_id,
+                            'student_roll_no': row.roll_no,
                             'name': row.name,
                             'contact': row.contact,
                             'email': row.email,
