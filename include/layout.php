@@ -1,65 +1,26 @@
 <?php
 /*
- * Shared admin layout: menu definitions + sidebar / topbar renderers.
- * Used by include/navbar.php, franchise_navbar.php
- * and the matching sidebar_*.php files.
+ * Shared portal layout: sidebar / topbar renderers. The menu depends on the signed-in
+ * user's role and permissions (include/auth.php). Used by include/navbar.php and sidebar_superadmin.php.
  */
 
 if (!function_exists('nt_menu')) {
 
-    function nt_menu($role)
+    require_once __DIR__ . '/auth.php';
+
+    /** Menu of the signed-in user (see nt_pages() in auth.php). */
+    function nt_menu($role = null)
     {
-        $menus = [
-            'super_admin' => [
-                'Overview' => [
-                    ['dashboard.php', 'Dashboard', 'bx-grid-alt'],
-                ],
-                'Management' => [
-                    ['manage_franchise.php', 'Franchises', 'bx-buildings'],
-                    ['manage_department.php', 'Departments', 'bx-sitemap'],
-                    ['manage_subscriptions.php', 'Subscriptions', 'bx-package'],
-                    ['students.php', 'Students', 'bx-user'],
-                    ['parents.php', 'Parents', 'bx-group'],
-                ],
-                'Plans' => [
-                    ['assign_plan.php', 'Assign Plan', 'bx-purchase-tag'],
-                    ['assign_plan_department.php', 'Assign by Department', 'bx-git-branch'],
-                ],
-                'Reports' => [
-                    ['transaction_history.php', 'Transactions', 'bx-receipt'],
-                    ['call_history.php', 'Call History', 'bx-phone-call'],
-                ],
-                'Support' => [
-                    ['student_tickets.php', 'Student Tickets', 'bx-support'],
-                    ['parent_tickets.php', 'Parent Tickets', 'bx-shield-quarter'],
-                    ['parent_login_message.php', 'Login Message', 'bx-bell'],
-                ],
-            ],
-            'franchise' => [
-                'Overview' => [
-                    ['dashboard.php', 'Dashboard', 'bx-grid-alt'],
-                ],
-                'Management' => [
-                    ['manage_students.php', 'Students', 'bx-user'],
-                    ['manage_parents.php', 'Parents', 'bx-group'],
-                ],
-                'Reports' => [
-                    ['transaction_history.php', 'Transactions', 'bx-receipt'],
-                    ['call_history.php', 'Call History', 'bx-phone-call'],
-                    ['student_skip.php', 'Student Skip Data', 'bx-skip-next'],
-                    ['parent_skip.php', 'Parent Skip Data', 'bx-skip-next'],
-                ],
-            ],
-        ];
-        return $menus[$role] ?? [];
+        return nt_menu_for();
     }
 
-    function nt_role_label($role)
+    function nt_role_label($role = null)
     {
         return [
             'super_admin' => 'Super Admin',
-            'franchise'   => 'Franchise Portal',
-        ][$role] ?? '';
+            'sub_admin'   => 'Sub Admin',
+            'school'      => 'School',
+        ][nt_role()] ?? '';
     }
 
     function nt_current_page()
@@ -85,7 +46,7 @@ if (!function_exists('nt_menu')) {
         return [$fallback, ''];
     }
 
-    function nt_render_sidebar($role)
+    function nt_render_sidebar($role = null)
     {
         global $basePath;
         list($activeTitle) = nt_page_meta($role);
@@ -93,7 +54,7 @@ if (!function_exists('nt_menu')) {
 <div class="nt-backdrop" onclick="ntToggleSidebar(false)"></div>
 <aside class="vertical-menu nt-sidebar">
     <div class="nt-brand">
-        <a href="dashboard.php" class="nt-brand-link">
+        <a href="<?= htmlspecialchars(nt_home() ?: 'dashboard.php') ?>" class="nt-brand-link">
             <img src="<?= $basePath ?>/assets/admin/images/nayan_logo.png" alt="Nayan Tara" class="nt-brand-logo">
         </a>
         <span class="nt-brand-role"><?= nt_role_label($role) ?></span>

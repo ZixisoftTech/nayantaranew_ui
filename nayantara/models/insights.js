@@ -25,7 +25,7 @@ function scopeFor(req) {
     try { claims = token ? jwt.verify(token, SECRET) : null; } catch (e) { claims = null; }
     if (!claims) return null;
     const portal = req.query.portal === 'franchise' ? 'franchise' : 'admin';
-    if (portal === 'admin') return claims.role === 'admin' ? { franchiseId: null } : null;
+    if (portal === 'admin') return claims.role === 'admin' || claims.role === 'subadmin' ? { franchiseId: null } : null;
     if (claims.role && claims.role !== 'franchise') return null;
     const id = Number(claims.userId);
     return Number.isInteger(id) && id > 0 ? { franchiseId: id } : null;

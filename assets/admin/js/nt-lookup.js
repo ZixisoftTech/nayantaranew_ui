@@ -449,7 +449,18 @@
                 ['Transactions', 'bx-receipt', 'transaction_history.php?department_id=' + p.id]
             ]
         };
-        return map[type] || [];
+        return (map[type] || []).map(function (l) { return [l[0], l[1], rolePage(l[2])]; });
+    }
+
+    /* school accounts use the school_*.php versions of these pages */
+    var SCHOOL_PAGES = {
+        'call_history.php': 'school_call_history.php', 'transaction_history.php': 'school_transactions.php',
+        'manage_parents.php': 'school_parents.php', 'manage_students.php': 'school_students.php'
+    };
+    function rolePage(href) {
+        if (ROLE === 'super_admin' || !href) return href;
+        var i = href.indexOf('?'), file = i < 0 ? href : href.slice(0, i);
+        return (SCHOOL_PAGES[file] || file) + (i < 0 ? '' : href.slice(i));
     }
 
     function gotoSection(type, p) {
@@ -462,6 +473,7 @@
 
     /* lists are capped by the API (latest 15); point to the full, filtered page when there is more */
     function more(shown, total, href) {
+        href = rolePage(href);
         if (!(total > shown)) return '';
         return '<p class="nt-list-more">Showing latest ' + shown + ' of ' + num(total) +
             (href ? '<a class="nt-list-more-link" href="' + esc(href) + '">View all<i class="bx bx-right-arrow-alt"></i></a>' : '') + '</p>';

@@ -7,14 +7,12 @@ require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('https://na
 // $path = "http://localhost:8085";
 // $path = "http://65.0.164.127:8000"; 
 $path = nt_api('https://nayantarabyspacs.co.in');
-?>
-
-<script>
-const admincheck = localStorage.getItem('admintoken')
-if (admincheck != null) {
-    window.location.href = '<?= $basePath ?>/super_admin/dashboard.php';
+require_once __DIR__ . '/../include/auth.php';
+// already signed in: go to the first page this account can open
+if (nt_role() && nt_home()) {
+    nt_redirect_js($basePath . '/super_admin/' . nt_home());
 }
-</script>
+?>
 
 <body class="nt-auth-body">
     <div class="nt-auth">
@@ -33,10 +31,10 @@ if (admincheck != null) {
         </aside>
         <main class="nt-auth-main">
             <div class="nt-auth-card">
-                <span class="nt-auth-badge"><i class="bx bx-shield-quarter"></i>Super Admin</span>
+                <span class="nt-auth-badge"><i class="bx bx-shield-quarter"></i>Nayan Tara Portal</span>
                 <h1>Welcome back</h1>
-                <p class="nt-auth-sub">Sign in to manage franchises, plans and reports.</p>
-                <form class="form-horizontal" id="adminlogin" method="POST" action="<?= $path ?>/api/admin-login" novalidate>
+                <p class="nt-auth-sub">Admins, sub admins and schools sign in here.</p>
+                <form class="form-horizontal" id="adminlogin" method="POST" action="<?= $path ?>/api/portal-login" novalidate>
                 <div class="form-group">
                     <label>Email address</label>
                     <div class="nt-input-icon">
@@ -64,7 +62,6 @@ if (admincheck != null) {
                 </script>
                 <button class="login-btn" id="submit" name="submit" type="submit">Sign in <i class="bx bx-right-arrow-alt"></i></button>
                 </form>
-                <div class="nt-auth-switch">Other portals: <a href="<?= $basePath ?>/franchise/login.php">Franchise login</a></div>
             </div>
         </main>
     </div>
@@ -83,7 +80,6 @@ if (admincheck != null) {
                 password: {
                     required: true,
                     minlength: 6,
-                    maxlength: 12,
                 },
             },
             messages: {
@@ -93,8 +89,7 @@ if (admincheck != null) {
                 },
                 password: {
                     required: "Please enter password",
-                    minlength: "Please field accept min 6 digits",
-                    maxlength: "Please field accept max 12 digits",
+                    minlength: "Password must be at least 6 characters",
                 },
             },
         });
@@ -122,16 +117,14 @@ if (admincheck != null) {
                         'error'
                     );
                 } else {
-                    Swal.fire(
-                        'success!',
-                        `${response.message}`,
-                        'success',
-                    );
-                    setTimeout(() => {
-                        document.location.reload();
-                    }, 3000);
-                    location = "super_admin/dashboard.php";
-                    let admintoken = localStorage.setItem("admintoken", response.data.admintoken);
+                    const d = response.data;
+                    // the portal pages read the token from this cookie (include/auth.php) and the API key the pages use
+                    document.cookie = 'nt_token=' + d.token + '; path=/; max-age=' + 30 * 86400 + '; SameSite=Lax';
+                    document.cookie = 'nt_school=; path=/; max-age=0';
+                    localStorage.removeItem('admintoken');
+                    localStorage.removeItem('franchisetoken');
+                    localStorage.setItem(d.role === 'school' ? 'franchisetoken' : 'admintoken', d.token);
+                    location = '<?= $basePath ?>/super_admin/' + (d.role === 'school' ? 'school_dashboard.php' : 'dashboard.php');
                 }
             },
             error: function(xhr, desc, err) {}

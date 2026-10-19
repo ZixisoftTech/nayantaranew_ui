@@ -92,6 +92,10 @@ async function updateMin() {
                                 <div class="col-md-6 text-left">
                                     <h5>Students</h5>
                                 </div>
+                                <div class="col-md-6 text-right">
+                                    <a href="javascript:void(0);" data-toggle="modal" data-target=".import" onclick="openStudentImport()"
+                                        class="btn btn-primary create-btn"><i class="bx bx-upload"></i> Bulk import</a>
+                                </div>
                                 <!-- <div class="col-md-6 text-right">
                                     <a href="javascript:void(0);" data-toggle="modal" data-target=".add" class="btn btn-primary create-btn">Create</a>
                                 </div> -->
@@ -146,6 +150,59 @@ async function updateMin() {
 
     <?php include("../include/foot.php") ?>
     <?php include("../include/footer.php") ?>
+
+    <div class="modal fade import" tabindex="-1" role="dialog" aria-labelledby="importTitle" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title mt-0" id="importTitle">Bulk import students</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form action="<?= $path ?>/import-csv" enctype="multipart/form-data" method="post" id="studentImportForm">
+                    <div class="modal-body">
+                        <input type="hidden" name="return_to" value="super_admin/students.php">
+                        <p class="text-muted small">Each row's <strong>department_id</strong> is the house ID (the ID column on the Houses page). The school is picked automatically from the house.</p>
+                        <div class="form-group">
+                            <label class="d-flex justify-content-between">CSV file<span>
+                                <a href="<?= $basePath ?>/assets/student.csv" download="students.csv" target="_blank"><i class="bx bx-download"></i> Sample CSV</a></span></label>
+                            <input type="file" name="import-csv" accept=".csv" required class="form-control" aria-label="Students CSV file">
+                            <small class="text-muted">Students already in the school (same roll no) go to Student Skip Data. Rows with a house ID that doesn't exist are not imported.</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary create-btn">Import students</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function openStudentImport() {
+        document.getElementById('studentImportForm').reset();
+    }
+
+    (function () {
+        const params = new URLSearchParams(location.search);
+        const status = params.get('import');
+        if (!status) return;
+        history.replaceState(null, '', location.pathname);
+        $(function () {
+            const n = (k) => Number(params.get(k)) || 0;
+            if (status === 'done') {
+                const lines = [`${n('added')} student${n('added') === 1 ? '' : 's'} added`];
+                if (n('skipped')) lines.push(`${n('skipped')} already existed or had a house from another school (see Student Skip Data)`);
+                if (n('unknown')) lines.push(`${n('unknown')} had a house ID that doesn't exist and were not imported`);
+                if (n('failed')) lines.push(`${n('failed')} could not be saved`);
+                Swal.fire('Import finished', lines.join('<br>'), n('unknown') || n('failed') ? 'warning' : 'success');
+            } else {
+                Swal.fire('error!', status === 'missing' ? 'Please choose a CSV file.' : 'The import failed. Please check the file and try again.', 'error');
+            }
+        });
+    })();
+    </script>
 
     <div class="modal fade add" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">

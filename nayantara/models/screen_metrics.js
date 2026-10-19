@@ -28,7 +28,7 @@ function claimsFor(req, role) {
             return Number.isInteger(id) && id > 0 ? id : null;
         }
         const c = jwt.verify(token, ADMIN_SECRET);
-        if (c.role !== role) return null;
+        if (c.role !== role && !(role === 'admin' && c.role === 'subadmin')) return null;
         const id = Number(c.userId);
         return Number.isInteger(id) && id > 0 ? id : null;
     } catch (e) {

@@ -44,7 +44,7 @@ function authorise(req) {
     } catch (e) {
         throw new HttpError(401, 'Your session has expired. Please sign in again.');
     }
-    if (claims.role === 'admin') return { role: 'admin', franchiseId: null };
+    if (claims.role === 'admin' || claims.role === 'subadmin') return { role: 'admin', franchiseId: null };
     if (claims.role === 'franchise') return { role: 'franchise', franchiseId: Number(claims.userId) };
     // tokens issued before roles were added can't be told apart safely
     throw new HttpError(401, 'Please sign out and sign in again to use quick view.');

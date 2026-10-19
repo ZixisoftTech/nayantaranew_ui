@@ -23,6 +23,23 @@ const SETTINGS_COLUMNS = {
 
 ensureColumns('tbl_franchise', SETTINGS_COLUMNS);
 
+/**
+ * The school's email + password is its portal login, so the email can't belong to an admin / sub admin
+ * (they'd win at sign-in) or to another school. Calls back with an error message or null.
+ */
+const loginEmailTaken = (email, franchiseId, callBack) => {
+    dataBase.query(
+        `SELECT (SELECT COUNT(*) FROM tbl_admin WHERE email = ?) AS admins,
+                (SELECT COUNT(*) FROM tbl_franchise WHERE email = ? AND Id <> ?) AS schools`,
+        [email, email, Number(franchiseId) || 0],
+        (error, rows) => {
+            if (error) return callBack('Unable to check the email');
+            if (rows[0].admins > 0) return callBack('This email is used by an admin or sub admin login');
+            if (rows[0].schools > 0) return callBack('Email already exists');
+            return callBack(null);
+        });
+};
+
 /** Validates the school settings in a request body. Returns { values } or { message } on error. */
 const readSettings = (body) => {
     const values = {};
@@ -152,8 +169,8 @@ const addFranchise = (req, res, next) => {
             return res.status(200).send({ error: true, message: settings.message });
         }
         else {
-            dataBase.query('SELECT * From tbl_franchise WHERE email = "' + email + '"', (error, findEmail, fields) => {
-                if (findEmail == 0) {
+            loginEmailTaken(email, 0, (taken) => {
+                if (!taken) {
                     const row = { franchiseName, franchiserName, email, password, address, state, city, pincode, room_id, hash, by_plan_permision, remark, ...settings.values };
                     dataBase.query('INSERT INTO tbl_franchise SET ?', [row], (error, addFranchise, fields) => {
                         if (addFranchise == 0) {
@@ -163,7 +180,7 @@ const addFranchise = (req, res, next) => {
                         }
                     })
                 } else {
-                    return res.status(200).send({ error: true, message: "Email already exists", data: null });
+                    return res.status(200).send({ error: true, message: taken, data: null });
                 }
             })
         }
@@ -347,12 +364,17 @@ const editFranchise = (req, res, next) => {
         }
         else {
             Object.assign(updateData, settings.values);
-            dataBase.query('UPDATE tbl_franchise SET ? WHERE Id = ?', [updateData, updateData.id], (error, results, fields) => {
-                if (results) {
-                    return res.status(200).send({ error: false, message: "Franchise Successfully Update", data: results });
-                } else {
-                    return res.status(200).send({ error: true, message: "Franchise not successfully Update", data: null });
+            loginEmailTaken(updateData.email, updateData.id, (taken) => {
+                if (taken) {
+                    return res.status(200).send({ error: true, message: taken, data: null });
                 }
+                dataBase.query('UPDATE tbl_franchise SET ? WHERE Id = ?', [updateData, updateData.id], (error, results, fields) => {
+                    if (results) {
+                        return res.status(200).send({ error: false, message: "Franchise Successfully Update", data: results });
+                    } else {
+                        return res.status(200).send({ error: true, message: "Franchise not successfully Update", data: null });
+                    }
+                })
             })
         }
     } catch (error) {

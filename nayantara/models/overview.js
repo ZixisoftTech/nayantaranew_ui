@@ -23,7 +23,7 @@ const q = (sql, params) => new Promise((resolve, reject) => {
 function isAdmin(req) {
     const header = req.headers.authorization || '';
     const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-    try { return !!token && jwt.verify(token, SECRET).role === 'admin'; } catch (e) { return false; }
+    try { return !!token && ['admin', 'subadmin'].includes(jwt.verify(token, SECRET).role); } catch (e) { return false; }
 }
 
 // tbl_department_timeslots.day uses full day names, with Saturday stored as "Satuarday"

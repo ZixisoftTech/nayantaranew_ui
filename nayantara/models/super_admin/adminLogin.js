@@ -15,6 +15,9 @@ const adminLogin = async (req, res, next) => {
                     if (password == 0) {
                         return res.status(200).send({ error: true, message: "Please insert the passowrd", data: null });
                     } else {
+                        if (findEmail[0].role === 'sub_admin') {
+                            return res.status(200).send({ error: true, message: "Please sign in from the portal login page", data: null });
+                        }
                         if (findEmail[0].password == password) {
                             const id = findEmail[0].id;
                             const admintoken = jwt.sign({ userId: id, role: "admin" }, secretKey);

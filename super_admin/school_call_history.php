@@ -1,6 +1,6 @@
 <?php include("../include/head.php") ?>
-<?php include("../include/franchise_navbar.php") ?>
-<?php include("../include/sidebar_franchise.php") ?>
+<?php include("../include/navbar.php") ?>
+<?php include("../include/sidebar_superadmin.php") ?>
 <?php
 // $basePath = 'http://localhost/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 

@@ -38,14 +38,29 @@ var upload = multer({
     storage: storage
 });
 
-app.post('/import-csv', upload.single("import-csv"), (req, res) => {
-    uploadCsv(__dirname + '/uploads/' + req.file.filename, req.body);
-    res.redirect(`${basePath}/franchise/manage_students.php`)
+// back to the portal page the import was sent from (school students page, or the super admin Students page)
+function importReturn(req, status) {
+    const back = /^super_admin\/[a-z_]+\.php$/.test(req.body.return_to || '') ? req.body.return_to : 'super_admin/school_students.php';
+    return `${basePath}/${back}?import=${status}`;
+}
+
+// franch_id is optional: without it each row's department_id (house) decides the school
+app.post('/import-csv', upload.single("import-csv"), async (req, res) => {
+    if (!req.file) return res.redirect(importReturn(req, 'missing'));
+    try {
+        const counts = await uploadCsv(__dirname + '/uploads/' + req.file.filename, req.body);
+        res.redirect(importReturn(req, 'done') + Object.entries(counts).map(([k, v]) => `&${k}=${v}`).join(''));
+    } catch (error) {
+        console.error('Student import failed', error);
+        res.redirect(importReturn(req, 'failed'));
+    }
 });
 
 async function getDepartmentData(franch_id, student_id) {
     return new Promise((resolve, reject) => {
-        dataBase.query('select * from `tbl_department` where `id`= "' + student_id + '" and `franchise_id`= "' + franch_id + '"', function (error, results, fields) {
+        // no school given: the house alone decides it
+        const sql = franch_id ? 'select * from `tbl_department` where `id` = ? and `franchise_id` = ?' : 'select * from `tbl_department` where `id` = ?';
+        dataBase.query(sql, franch_id ? [student_id, franch_id] : [student_id], function (error, results, fields) {
             return error ? reject(error) : resolve(results)
         });
     })
@@ -108,9 +123,10 @@ async function getStudent(franch_id, student_id) {
 //     stream.pipe(fileStream);
 // }
 
-async function uploadCsv(uriFile, body) {
-    console.log("body data------", body);
-
+/** Imports students (and their parents) from a CSV; resolves with { added, skipped, unknown, failed } once done. */
+function uploadCsv(uriFile, body) {
+  return new Promise((resolve, reject) => {
+    const counts = { added: 0, skipped: 0, unknown: 0, failed: 0 };
     let stream = fs.createReadStream(uriFile);
     let csvDataColl = [];
 
@@ -120,16 +136,25 @@ async function uploadCsv(uriFile, body) {
             data.push(body.franch_id);
             csvDataColl.push(data);
         })
+        .on("error", reject)
         .on("end", async function () {
-
+          try {
             csvDataColl.shift(); // remove header
 
             for (const student_id of csvDataColl) {
 
                 const department = await getDepartmentData(body.franch_id, student_id[3]);
+                const franchId = body.franch_id || (department[0] && department[0].franchise_id);
+
+                // house not found and no school chosen: nowhere to record it
+                if (!franchId) {
+                    counts.unknown++;
+                    continue;
+                }
 
                 // ================= STUDENT SKIP =================
                 if (!department[0]) {
+                    counts.skipped++;
                     const sql = `
                         INSERT INTO tbl_studentskip
                         (franchise_id, department_id, name, student_roll_no, contact, password, status, created_at, updated_at)
@@ -137,7 +162,7 @@ async function uploadCsv(uriFile, body) {
                     `;
 
                     const insertData = [
-                        body.franch_id,
+                        franchId,
                         student_id[3],
                         student_id[0],
                         student_id[1],
@@ -153,7 +178,7 @@ async function uploadCsv(uriFile, body) {
                 }
 
                 // ================= CHECK STUDENT =================
-                const student = await getStudent(body.franch_id, student_id[1]);
+                const student = await getStudent(franchId, student_id[1]);
 
                 if (!student[0]) {
 
@@ -166,7 +191,7 @@ async function uploadCsv(uriFile, body) {
                     `;
 
                     const studentInsertData = [
-                        body.franch_id,
+                        franchId,
                         student_id[3],
                         student_id[0],
                         student_id[1],
@@ -179,11 +204,12 @@ async function uploadCsv(uriFile, body) {
                         student_id[9]
                     ];
 
-                    dataBase.query(studentSql, [studentInsertData], (err, res) => {
-                        if (err) {
-                            console.error(err);
-                            return;
-                        }
+                    const res = await new Promise((done) => dataBase.query(studentSql, [studentInsertData], (err, result) => {
+                        if (err) console.error(err);
+                        done(err ? null : result);
+                    }));
+                    if (res) {
+                        counts.added++;
 
                         const studentDbId = res.insertId;
 
@@ -206,7 +232,7 @@ async function uploadCsv(uriFile, body) {
                             if (p.name && p.contact) {
                                 const parentInsertData = [
                                     studentDbId,
-                                    body.franch_id,
+                                    franchId,
                                     p.name,
                                     p.contact,
                                     null,
@@ -224,10 +250,13 @@ async function uploadCsv(uriFile, body) {
                                 });
                             }
                         });
-                    });
+                    } else {
+                        counts.failed++;
+                    }
 
                 } else {
                     // ================= DUPLICATE STUDENT =================
+                    counts.skipped++;
                     const sql = `
                         INSERT INTO tbl_studentskip
                         (franchise_id, department_id, name, student_roll_no, contact, password, status, created_at, updated_at)
@@ -235,7 +264,7 @@ async function uploadCsv(uriFile, body) {
                     `;
 
                     const insertData = [
-                        body.franch_id,
+                        franchId,
                         student_id[3],
                         student_id[0],
                         student_id[1],
@@ -251,14 +280,20 @@ async function uploadCsv(uriFile, body) {
             }
 
             fs.unlinkSync(uriFile); // delete CSV after all inserts
+            resolve(counts);
+          } catch (error) {
+            reject(error);
+          }
         });
 
     stream.pipe(fileStream);
+  });
 }
 
 app.post('/imports-csv', upload.single("imports-csv"), (req, res) => {
+    if (!req.file) return res.redirect(importReturn(req, 'missing'));
     uploadsCsv(__dirname + '/uploads/' + req.file.filename, req.body);
-    res.redirect(`${basePath}/franchise/manage_students.php`)
+    res.redirect(importReturn(req, 'started'))
 });
 
 async function getParent(contact) {
@@ -349,6 +384,7 @@ app.use('/api', phonepePayement);
 app.use('/api', addDepartment);
 app.use('/api', addFranchise);
 app.use('/api', require('./routes/settings_routes'));
+app.use('/api', require('./routes/auth_routes'));
 app.use('/api/uploads/franchise', express.static(path.join(__dirname, 'uploads/franchise')));
 app.use('/api', login_message);
 app.use('/api', dashboard);
