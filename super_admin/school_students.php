@@ -694,7 +694,6 @@ $(document).on('click', '#close', function() {
 
                             <div class="col-md-12 mb-3 d-flex">
                                 <mark>Parents Details 1</mark>
-                                <div class="text-warning">*</div>
                             </div>
                             <div class="form-group col-md-3">
                                 <label>Parent Name</label>
@@ -1166,9 +1165,8 @@ $(document).on('click', '#close', function() {
         jQuery("#createform").validate({
             rules: {
                 department_id: 'required',
-                parent_name1: 'required',
+                // parents are optional; a contact number, when given, is 10 digits
                 contact_number1: {
-                    required: true,
                     minlength: 10,
                     maxlength: 10,
                 },
@@ -1177,7 +1175,6 @@ $(document).on('click', '#close', function() {
                 //     email: true,
                 // },
                 password1: {
-                    required: true,
                     minlength: 4,
                     maxlength: 12,
                 },
@@ -1360,6 +1357,15 @@ $(document).on('click', '#close', function() {
 
     $(document).on('submit', '#createform', function(e) {
         e.preventDefault();
+        const val = (id) => document.getElementById(id).value.trim();
+        // parents are optional, but a filled-in parent needs a name and a 10 digit contact
+        for (const n of [1, 2, 3, 4]) {
+            const filled = ["parent_name", "contact_number", "email", "password"].some((f) => val(f + n));
+            if (filled && (!val("parent_name" + n) || !/^\d{10}$/.test(val("contact_number" + n)))) {
+                Swal.fire('error!', `Parent ${n}: enter a name and a 10 digit contact number, or leave all of it empty.`, 'error');
+                return;
+            }
+        }
         const item = {
             franchise_id: document.getElementById("franchise_id_form").value.trim(),
             department_id: document.getElementById("department_id").value.trim(),

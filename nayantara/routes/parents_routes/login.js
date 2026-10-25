@@ -3,6 +3,7 @@ const router = express.Router();
 const { Parentlogin, Parentotp, otpMatch, passwordUpdate, Logout, parentProfile, parentProfileUpdate, getOtp } = require('../../models/parent/login');
 const { getAvailablemin, getSubscription, buySubscription, getTarnsition, callhistory, updateParentStatus, getStatusByParentId, studentCallMinute, getWebStatusByStudentId, parentIssue, parentCallEnd, callDefuse, planPermision, getParentIssue, getParentByStudentId, parentLogout } = require('../../models/parent/otpsend');
 const { getStudentByParentId } = require("../../models/parent/new_api");
+const { addParent } = require('../../models/parent/add_parent');
 
 router.get('/get-parentissue', getParentIssue);
 router.post('/get-planpermission', planPermision);
@@ -29,5 +30,6 @@ router.post('/reset-password', passwordUpdate);
 router.post('/get-student', getStudentByParentId);
 router.get('/getparent-studentid', getParentByStudentId);
 router.post('/logout', parentLogout);
+router.post('/add-parent', addParent);
 
 module.exports = router;

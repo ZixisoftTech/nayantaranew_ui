@@ -241,61 +241,15 @@ async function getUpdateValue(id) {
     updateAllotmentHint('update');
     document.getElementById("updatefranchise_id").value = get.data.department[0].franchise_name;
 
-    document.getElementById("updateStart_time1").value = get.data.timeslots[0].start_time;
-    document.getElementById("updateStart_time12").value = get.data.timeslots[1].start_time;
-    document.getElementById("updateStart_time13").value = get.data.timeslots[2].start_time;
-
-    document.getElementById("updateStart_time2").value = get.data.timeslots[3].start_time;
-    document.getElementById("updateStart_time22").value = get.data.timeslots[4].start_time;
-    document.getElementById("updateStart_time23").value = get.data.timeslots[5].start_time;
-
-    document.getElementById("updateStart_time3").value = get.data.timeslots[6].start_time;
-    document.getElementById("updateStart_time32").value = get.data.timeslots[7].start_time;
-    document.getElementById("updateStart_time33").value = get.data.timeslots[8].start_time;
-
-    document.getElementById("updateStart_time4").value = get.data.timeslots[9].start_time;
-    document.getElementById("updateStart_time42").value = get.data.timeslots[10].start_time;
-    document.getElementById("updateStart_time43").value = get.data.timeslots[11].start_time;
-
-    document.getElementById("updateStart_time5").value = get.data.timeslots[12].start_time;
-    document.getElementById("updateStart_time52").value = get.data.timeslots[13].start_time;
-    document.getElementById("updateStart_time53").value = get.data.timeslots[14].start_time;
-
-    document.getElementById("updateStart_time6").value = get.data.timeslots[15].start_time;
-    document.getElementById("updateStart_time62").value = get.data.timeslots[16].start_time;
-    document.getElementById("updateStart_time63").value = get.data.timeslots[17].start_time;
-
-    document.getElementById("updateStart_time7").value = get.data.timeslots[18].start_time;
-    document.getElementById("updateStart_time72").value = get.data.timeslots[19].start_time;
-    document.getElementById("updateStart_time73").value = get.data.timeslots[20].start_time;
-
-    document.getElementById("updateEnd_time1").value = get.data.timeslots[0].end_time;
-    document.getElementById("updateEnd_time12").value = get.data.timeslots[1].end_time;
-    document.getElementById("updateEnd_time13").value = get.data.timeslots[2].end_time;
-
-    document.getElementById("updateEnd_time2").value = get.data.timeslots[3].end_time;
-    document.getElementById("updateEnd_time22").value = get.data.timeslots[4].end_time;
-    document.getElementById("updateEnd_time23").value = get.data.timeslots[5].end_time;
-
-    document.getElementById("updateEnd_time3").value = get.data.timeslots[6].end_time;
-    document.getElementById("updateEnd_time32").value = get.data.timeslots[7].end_time;
-    document.getElementById("updateEnd_time33").value = get.data.timeslots[8].end_time;
-
-    document.getElementById("updateEnd_time4").value = get.data.timeslots[9].end_time;
-    document.getElementById("updateEnd_time42").value = get.data.timeslots[10].end_time;
-    document.getElementById("updateEnd_time43").value = get.data.timeslots[11].end_time;
-
-    document.getElementById("updateEnd_time5").value = get.data.timeslots[12].end_time;
-    document.getElementById("updateEnd_time52").value = get.data.timeslots[13].end_time;
-    document.getElementById("updateEnd_time53").value = get.data.timeslots[14].end_time;
-
-    document.getElementById("updateEnd_time6").value = get.data.timeslots[15].end_time;
-    document.getElementById("updateEnd_time62").value = get.data.timeslots[16].end_time;
-    document.getElementById("updateEnd_time63").value = get.data.timeslots[17].end_time;
-
-    document.getElementById("updateEnd_time7").value = get.data.timeslots[18].end_time;
-    document.getElementById("updateEnd_time72").value = get.data.timeslots[19].end_time;
-    document.getElementById("updateEnd_time73").value = get.data.timeslots[20].end_time;
+    // 3 slots per day, Sunday..Saturday; a house saved without slots has none yet.
+    const slots = get.data.timeslots || [];
+    for (let day = 1; day <= 7; day++) {
+        ['', '2', '3'].forEach((n, k) => {
+            const slot = slots[(day - 1) * 3 + k] || {};
+            document.getElementById("updateStart_time" + day + n).value = slot.start_time || '';
+            document.getElementById("updateEnd_time" + day + n).value = slot.end_time || '';
+        });
+    }
 }
 
 async function deleteDepartment(id) {

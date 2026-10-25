@@ -254,17 +254,13 @@ const getDepartmentId = (req, res, next) => {
                     return res.status(200).send({ error: true, message: "department data not found", data: null });
                 }
                 else {
-                    dataBase.query('SELECT * From tbl_department_timeslots WHERE department_id = "' + department[0].id + '"', function (error, timeslots, fields) {
-                        if (timeslots == 0) {
-                            return res.status(200).send({ error: true, message: "departmet timeslots not found", data: null });
+                    dataBase.query('SELECT * From tbl_department_timeslots WHERE department_id = "' + department[0].id + '" ORDER BY id', function (error, timeslots, fields) {
+                        // a house without timeslots is still editable; the form shows empty times
+                        const departments = {
+                            department: department,
+                            timeslots: timeslots || []
                         }
-                        else {
-                            const departments = {
-                                department: department,
-                                timeslots: timeslots
-                            }
-                            return res.status(200).send({ error: false, message: "department successsfully found", data: departments })
-                        }
+                        return res.status(200).send({ error: false, message: "department successsfully found", data: departments })
                     })
                 }
             })

@@ -213,4 +213,4 @@ const deleteSubAdmin = handle(async (req) => {
     return { message: 'Sub admin deleted' };
 });
 
-module.exports = { portalLogin, me, schoolToken, listSubAdmins, createSubAdmin, updateSubAdmin, deleteSubAdmin, isAdminRole };
+module.exports = { portalLogin, me, schoolToken, listSubAdmins, createSubAdmin, updateSubAdmin, deleteSubAdmin, isAdminRole, claimsOf, HttpError, handle, q };

@@ -4,21 +4,31 @@ const { personName } = require('../lists');
 const addStudents = (req, res, next) => {
     try {
         const data = req.body;
-        const parent = req.body.parent;
+        // parents are optional: only rows with a contact number are saved
+        const parent = (req.body.parent || []).filter(item => item && String(item.contact || '').trim() !== '');
+        // optional: starting balance in Spacs Coins (1 coin = 60 s) and account status ('1' active, '0' inactive)
+        const coins = data.coins === undefined || data.coins === '' ? 0 : Number(data.coins);
+        const loginStatus = data.login_status === undefined || data.login_status === '' ? '1' : String(data.login_status);
         if (data.franchise_id == 0 || data.department_id == 0 || data.name == 0 || data.student_roll_no == 0 || data.password == 0 || data.confirmpassword == 0) {
             return res.status(200).send({ error: true, message: "Please insert all field", data: null });
+        } else if (!Number.isFinite(coins) || coins < 0 || coins > 100000) {
+            return res.status(200).send({ error: true, message: "Initial tokens must be 0 or more", data: null });
+        } else if (loginStatus !== '0' && loginStatus !== '1') {
+            return res.status(200).send({ error: true, message: "Please select the account status", data: null });
         } else {
             dataBase.query('SELECT * From tbl_student WHERE franchise_id = "' + data.franchise_id + '" AND student_roll_no = "' + data.student_roll_no + '"', function (error, findcontact, fields) {
                 if (findcontact != 0) {
                     return res.status(200).send({ error: true, message: "student roll number already exists", data: null });
                 } else {
-                    const value = parent.map(item => item.contact);
+                    // NULL never matches, so a student without parents skips the duplicate check
+                    const value = parent.length ? parent.map(item => item.contact) : [null];
                     dataBase.query('SELECT * from tbl_parents WHERE franchise_id = "' + data.franchise_id + '" AND contact in (?)', [value], function (error, results, fields) {
                         if (results != 0) {
                             return res.status(200).send({ error: true, message: "Parent contact number already exists" });
                         } else {
-                            const VALUES = [data.franchise_id, data.department_id, data.name, data.student_roll_no, data.email, data.contact, data.password];
-                            dataBase.query('INSERT INTO tbl_student (franchise_id,department_id,name,student_roll_no,email,contact,password) VALUES (?)', [VALUES], function (error, student, fields) {
+                            const seconds = Math.round(coins * 60);
+                            const VALUES = [data.franchise_id, data.department_id, data.name, data.student_roll_no, data.email, data.contact, data.password, loginStatus, seconds];
+                            dataBase.query('INSERT INTO tbl_student (franchise_id,department_id,name,student_roll_no,email,contact,password,login_status,total_talktime) VALUES (?)', [VALUES], function (error, student, fields) {
                                 if (student == 0) {
                                     return res.status(200).send({ error: true, message: "Stuent not successfully added", data: null });
                                 } else {
@@ -35,8 +45,12 @@ const addStudents = (req, res, next) => {
                                             parents.push(element)
                                         }
                                     });
-                                    const VALUES = parents.map(item => [data.franchise_id, item.student_id, item.name, item.contact, item.email, item.password]);
-                                    dataBase.query('INSERT INTO tbl_parents (franchise_id,student_id,name,contact,email,password) VALUES ?', [VALUES], function (error, parent, fields) {
+                                    if (parents.length == 0) {
+                                        return res.status(200).send({ error: false, message: "Student successfully added", data: student });
+                                    }
+                                    // parents share the student's balance
+                                    const VALUES = parents.map(item => [data.franchise_id, item.student_id, item.name, item.contact, item.email, item.password, seconds]);
+                                    dataBase.query('INSERT INTO tbl_parents (franchise_id,student_id,name,contact,email,password,total_talktime) VALUES ?', [VALUES], function (error, parent, fields) {
                                         if (parent == 0) {
                                             return res.status(200).send({ error: true, message: "Parent not successfuly added", data: null });
                                         } else {
