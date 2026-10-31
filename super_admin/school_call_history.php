@@ -1,6 +1,6 @@
 <?php include("../include/head.php") ?>
-<?php include("../include/franchise_navbar.php") ?>
-<?php include("../include/sidebar_franchise.php") ?>
+<?php include("../include/navbar.php") ?>
+<?php include("../include/sidebar_superadmin.php") ?>
 <?php
 // $basePath = 'http://localhost/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 
@@ -107,10 +107,10 @@ async function getStudentName(t) {
                                     <thead>
                                         <tr>
                                             <th>S. No</th>
-                                            <th>Date And Time</th>
+                                            <th>Date &amp; Time</th>
                                             <th>Student Name</th>
                                             <th>Parent Name</th>
-                                            <th>Minutes</th>
+                                            <th>Duration (mm:ss)</th>
                                         </tr>
                                     </thead>
                                     <tbody id="getCallHistory">

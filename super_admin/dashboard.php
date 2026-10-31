@@ -47,7 +47,7 @@ if (!localStorage.getItem("admintoken")) { //HERE IS NOT WORKING
                         </div>
                         <div class="col-sm-6 col-xl-3">
                             <div class="card mini-stats-wid">
-                                <a href="<?= $basePath ?>/super_admin/student_summary.php">
+                                <a href="<?= $basePath ?>/super_admin/students.php">
                                     <div class="card-body">
                                         <div class="media">
                                             <div class="media-body">
@@ -68,7 +68,7 @@ if (!localStorage.getItem("admintoken")) { //HERE IS NOT WORKING
                         </div>
                         <div class="col-sm-6 col-xl-3">
                             <div class="card mini-stats-wid">
-                                <a href="<?= $basePath ?>/super_admin/student_summary.php">
+                                <a href="<?= $basePath ?>/super_admin/students.php">
                                     <div class="card-body">
                                         <div class="media">
                                             <div class="media-body">

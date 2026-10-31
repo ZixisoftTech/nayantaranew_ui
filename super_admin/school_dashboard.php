@@ -1,6 +1,6 @@
 <?php include("../include/head.php") ?>
-<?php include("../include/franchise_navbar.php") ?>
-<?php include("../include/sidebar_franchise.php") ?>
+<?php include("../include/navbar.php") ?>
+<?php include("../include/sidebar_superadmin.php") ?>
 <?php 
 // $basePath = 'http://localhost/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 
@@ -13,7 +13,7 @@ $path = nt_api('https://nayantarabyspacs.co.in');
 ?>
 <script type="text/javascript">
 if (!localStorage.getItem("franchisetoken")) {
-    window.location.href = '<?= $basePath ?>/franchise/login.php';
+    window.location.href = '<?= $basePath ?>/';
 }
 
 $(document).ready(function() {
@@ -82,7 +82,7 @@ async function getTotalDepartment(id) {
                     <div class="row">
                         <div class="col-sm-6 col-xl-3">
                             <div class="card mini-stats-wid">
-                                <a href="<?= $basePath ?>/franchise/manage_students.php">
+                                <a href="<?= $basePath ?>/super_admin/school_students.php">
                                     <div class="card-body">
                                         <div class="media">
                                             <div class="media-body">
@@ -103,7 +103,7 @@ async function getTotalDepartment(id) {
                         </div>
                         <div class="col-sm-6 col-xl-3">
                             <div class="card mini-stats-wid">
-                                <a href="<?= $basePath ?>/franchise/manage_students.php">
+                                <a href="<?= $basePath ?>/super_admin/school_students.php">
                                     <div class="card-body">
                                         <div class="media">
                                             <div class="media-body">
@@ -124,7 +124,7 @@ async function getTotalDepartment(id) {
                         </div>
                         <div class="col-sm-6 col-xl-3">
                             <div class="card mini-stats-wid">
-                                <a href="<?= $basePath ?>/franchise/call_history.php">
+                                <a href="<?= $basePath ?>/super_admin/school_call_history.php">
                                     <div class="card-body">
                                         <div class="media">
                                             <div class="media-body">

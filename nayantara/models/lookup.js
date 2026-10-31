@@ -7,6 +7,8 @@
  *   GET /api/lookup/franchise/:id      profile + departments, counts, plans   (admin only)
  *   GET /api/lookup/department/:id     profile + students
  *
+ * Add ?full=1 to get every row instead of the latest 15 (used by the panel's Export).
+ *
  * Auth: "Authorization: Bearer <admintoken|franchisetoken>". The token must carry a
  * role claim ("admin" or "franchise", issued at login). Franchise tokens only ever
  * see records of their own franchise. All SQL is parameterised.
@@ -14,8 +16,15 @@
 const jwt = require('jsonwebtoken');
 const dataBase = require('../config/db');
 const { ready: schemaReady, col: C, live: LIVE } = require('./schema');
+const { liveName } = require('./lists');
 
 const SECRET = 'helloiamabhisheklodhi';
+
+// school / house settings columns (added by addFranchise.js / addDepartment.js at startup)
+const FRANCHISE_SETTINGS = ['logo', 'allow_parental_recharge', 'allow_audio_calls', 'video_rate', 'audio_rate', 'activation_fee',
+    'max_calls_per_day', 'daily_duration_min', 'min_call_duration_sec'];
+const HOUSE_SETTINGS = ['max_call_duration_sec', 'allotment_day', 'allotment_time', 'weekly_video_mins', 'weekly_audio_mins',
+    'parent_notice', 'student_notice'];
 
 const q = (sql, params) => new Promise((resolve, reject) => {
     dataBase.query(sql, params, (error, rows) => (error ? reject(error) : resolve(rows)));
@@ -35,7 +44,7 @@ function authorise(req) {
     } catch (e) {
         throw new HttpError(401, 'Your session has expired. Please sign in again.');
     }
-    if (claims.role === 'admin') return { role: 'admin', franchiseId: null };
+    if (claims.role === 'admin' || claims.role === 'subadmin') return { role: 'admin', franchiseId: null };
     if (claims.role === 'franchise') return { role: 'franchise', franchiseId: Number(claims.userId) };
     // tokens issued before roles were added can't be told apart safely
     throw new HttpError(401, 'Please sign out and sign in again to use quick view.');
@@ -48,6 +57,8 @@ const toId = (value) => {
 };
 
 const minutes = (seconds) => Math.floor((Number(seconds) || 0) / 60);
+// lists show the latest 15 rows; exports ask for everything
+const cap = (req) => (req.query.full === '1' ? '' : 'LIMIT 15');
 // total rows behind a LIMITed list (table/column are fixed identifiers, never user input)
 const count = (table, column, id) => q(`SELECT COUNT(*) AS n FROM ${table} WHERE ${column} = ?`, [id]).then((r) => r[0].n);
 
@@ -110,7 +121,7 @@ const student = handle(async (req, auth) => {
     const id = toId(req.params.id);
     const [row] = await q(
         `SELECT s.id, s.name, s.student_roll_no, s.email, s.contact, s.status, s.login_status, ${C('tbl_student', 's', 'validity')},
-                ${C('tbl_student', 's', 'autorecharge')}, s.total_talktime, s.created_at, s.franchise_id, s.department_id,
+                ${C('tbl_student', 's', 'autorecharge')}, s.total_talktime, s.created_at, s.updated_at, s.franchise_id, s.department_id,
                 f.franchiseName AS franchise_name, d.name AS department_name, d.device_name
            FROM tbl_student s
            LEFT JOIN tbl_franchise f ON f.Id = s.franchise_id
@@ -121,16 +132,19 @@ const student = handle(async (req, auth) => {
 
     const [parents, calls, callTotals, plans, payments, tickets] = await Promise.all([
         q(`SELECT id, name, contact, email, status, total_talktime FROM tbl_parents WHERE student_id = ? ORDER BY name`, [id]),
-        q(`SELECT id, parent_id, parent_name, minute, day, ${C('tbl_callhistory', '', 'phone_number')}, created_at
-             FROM tbl_callhistory WHERE student_id = ? ORDER BY created_at DESC LIMIT 15`, [id]),
+        // call rows keep a copy of the name taken at call time; prefer the live one
+        q(`SELECT c.id, c.parent_id, ${liveName('p.name', 'c.parent_name')} AS parent_name, c.minute, c.day,
+                  ${C('tbl_callhistory', 'c', 'phone_number')}, c.created_at
+             FROM tbl_callhistory c LEFT JOIN tbl_parents p ON p.id = c.parent_id
+            WHERE c.student_id = ? ORDER BY c.created_at DESC ${cap(req)}`, [id]),
         q(`SELECT COUNT(*) AS count, COALESCE(SUM(minute), 0) AS seconds FROM tbl_callhistory WHERE student_id = ?`, [id]),
         q(`SELECT id, plan_name, plan_price, plan_min, ${C('tbl_plan_purchase', '', 'plan_end_date')}, created_at
-             FROM tbl_plan_purchase WHERE student_id = ? ORDER BY created_at DESC LIMIT 15`, [id]),
+             FROM tbl_plan_purchase WHERE student_id = ? ORDER BY created_at DESC ${cap(req)}`, [id]),
         // tbl_student_payments is not present in every database export
         q(`SELECT id, amount, status, razorpay_payment_id, created_at
-             FROM tbl_student_payments WHERE student_id = ? ORDER BY created_at DESC LIMIT 15`, [id]).catch(() => []),
+             FROM tbl_student_payments WHERE student_id = ? ORDER BY created_at DESC ${cap(req)}`, [id]).catch(() => []),
         q(`SELECT id, subject, message, status, created_at
-             FROM tbl_student_issue WHERE student_id = ? ORDER BY created_at DESC LIMIT 15`, [id]),
+             FROM tbl_student_issue WHERE student_id = ? ORDER BY created_at DESC ${cap(req)}`, [id]),
     ]);
     const [planTotal, paymentTotal, ticketTotal] = await Promise.all([
         count('tbl_plan_purchase', 'student_id', id),
@@ -172,13 +186,14 @@ const parent = handle(async (req, auth) => {
     if (!row) return null;
 
     const [calls, callTotals, plans, tickets] = await Promise.all([
-        q(`SELECT id, student_id, student_name, minute, day, created_at
-             FROM tbl_callhistory WHERE parent_id = ? ORDER BY created_at DESC LIMIT 15`, [id]),
+        q(`SELECT c.id, c.student_id, ${liveName('s.name', 'c.student_name')} AS student_name, c.minute, c.day, c.created_at
+             FROM tbl_callhistory c LEFT JOIN tbl_student s ON s.id = c.student_id
+            WHERE c.parent_id = ? ORDER BY c.created_at DESC ${cap(req)}`, [id]),
         q(`SELECT COUNT(*) AS count, COALESCE(SUM(minute), 0) AS seconds FROM tbl_callhistory WHERE parent_id = ?`, [id]),
         q(`SELECT id, plan_name, plan_price, plan_min, ${C('tbl_plan_purchase', '', 'plan_end_date')}, created_at
-             FROM tbl_plan_purchase WHERE parent_id = ? ORDER BY created_at DESC LIMIT 15`, [id]),
+             FROM tbl_plan_purchase WHERE parent_id = ? ORDER BY created_at DESC ${cap(req)}`, [id]),
         q(`SELECT id, subject, message, status, created_at
-             FROM tbl_parents_issue WHERE parent_id = ? ORDER BY created_at DESC LIMIT 15`, [id]),
+             FROM tbl_parents_issue WHERE parent_id = ? ORDER BY created_at DESC ${cap(req)}`, [id]),
     ]);
     const [planTotal, ticketTotal] = await Promise.all([
         count('tbl_plan_purchase', 'parent_id', id),
@@ -200,11 +215,12 @@ const franchise = handle(async (req, auth) => {
     if (auth.role !== 'admin' && auth.franchiseId !== id) throw new HttpError(403, 'Not allowed');
     const [row] = await q(
         `SELECT Id AS id, ${C('tbl_franchise', '', 'franchiseId')}, franchiseName AS name, franchiserName, email, address, pincode, status,
-                ${['schoolemail', 'schoolcontact1', 'schoolcontact2', 'startdate', 'enddate', 'totaldevices'].map((c) => C('tbl_franchise', '', c)).join(', ')}, created_at
+                ${['schoolemail', 'schoolcontact1', 'schoolcontact2', 'startdate', 'enddate', 'totaldevices', ...FRANCHISE_SETTINGS].map((c) => C('tbl_franchise', '', c)).join(', ')}, created_at
            FROM tbl_franchise WHERE Id = ?`, [id]);
     if (!row) return null;
+    const full = req.query.full === '1';
 
-    const [departments, counts, plans] = await Promise.all([
+    const [departments, counts, plans, students, parents] = await Promise.all([
         q(`SELECT d.id, d.name, d.device_name, d.status,
                   (SELECT COUNT(*) FROM tbl_student s WHERE s.department_id = d.id AND ${LIVE('tbl_student', 's')}) AS students
              FROM tbl_department d WHERE d.franchise_id = ? AND ${LIVE('tbl_department', 'd')} ORDER BY d.name`, [id]),
@@ -216,6 +232,12 @@ const franchise = handle(async (req, auth) => {
           [id, id, id, id]),
         q(`SELECT id, plan_name, price, talktime_minutes, ${C('tbl_subscriptions', '', 'days')}, status
              FROM tbl_subscriptions WHERE franchise_id = ? AND ${LIVE('tbl_subscriptions')} ORDER BY price`, [id]),
+        full ? q(`SELECT s.id, s.name, s.student_roll_no, s.contact, s.email, d.name AS department_name, s.status, s.total_talktime, s.created_at
+                    FROM tbl_student s LEFT JOIN tbl_department d ON d.id = s.department_id
+                   WHERE s.franchise_id = ? AND ${LIVE('tbl_student', 's')} ORDER BY s.name`, [id]) : null,
+        full ? q(`SELECT p.id, p.name, p.contact, p.email, s.name AS student_name, s.student_roll_no, p.status, p.created_at
+                    FROM tbl_parents p LEFT JOIN tbl_student s ON s.id = p.student_id
+                   WHERE p.franchise_id = ? ORDER BY p.name`, [id]) : null,
     ]);
 
     return {
@@ -229,6 +251,10 @@ const franchise = handle(async (req, auth) => {
         },
         departments,
         plans: plans.map((p) => ({ ...p, talktime_min: minutes(p.talktime_minutes) })),
+        ...(full && {
+            students: students.map((s) => ({ ...s, available_min: minutes(s.total_talktime) })),
+            parents,
+        }),
     };
 });
 
@@ -236,7 +262,8 @@ const department = handle(async (req, auth) => {
     const id = toId(req.params.id);
     const [row] = await q(
         `SELECT d.id, d.name, d.device_name, d.status, ${C('tbl_department', 'd', 'emergency_contact_1')}, ${C('tbl_department', 'd', 'emergency_contact_2')},
-                ${C('tbl_department', 'd', 'emergency_contact_3')}, d.created_at, d.franchise_id, f.franchiseName AS franchise_name
+                ${C('tbl_department', 'd', 'emergency_contact_3')}, ${HOUSE_SETTINGS.map((c) => C('tbl_department', 'd', c)).join(', ')},
+                d.created_at, d.franchise_id, f.franchiseName AS franchise_name
            FROM tbl_department d
            LEFT JOIN tbl_franchise f ON f.Id = d.franchise_id
           WHERE d.id = ?${auth.franchiseId ? ' AND d.franchise_id = ?' : ''}`,
@@ -246,6 +273,10 @@ const department = handle(async (req, auth) => {
     const students = await q(
         `SELECT id, name, student_roll_no, contact, status, total_talktime
            FROM tbl_student WHERE department_id = ? AND ${LIVE('tbl_student')} ORDER BY name`, [id]);
+    const parents = req.query.full === '1' ? await q(
+        `SELECT p.id, p.name, p.contact, p.email, s.name AS student_name, s.student_roll_no, p.status, p.created_at
+           FROM tbl_parents p JOIN tbl_student s ON s.id = p.student_id
+          WHERE s.department_id = ? ORDER BY p.name`, [id]) : null;
 
     return {
         type: 'department',
@@ -256,6 +287,7 @@ const department = handle(async (req, auth) => {
             available_min: minutes(students.reduce((sum, s) => sum + (Number(s.total_talktime) || 0), 0)),
         },
         students: students.map((s) => ({ ...s, available_min: minutes(s.total_talktime) })),
+        ...(parents && { parents }),
     };
 });
 

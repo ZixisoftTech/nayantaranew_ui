@@ -1,1 +1,4 @@
 .DS_Store
+
+# Google Cloud credentials
+service-account*.json

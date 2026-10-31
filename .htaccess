@@ -3,3 +3,6 @@ RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}.php -f
 RewriteRule ^([^/]+)/?$ $1.php [L]
+# the separate franchise portal was merged into the single portal
+# (only the old pages; /franchise/api/... belongs to the API)
+RewriteRule ^franchise/?([a-z_]+(\.php)?)?$ / [R=301,L]

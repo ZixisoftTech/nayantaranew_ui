@@ -75,8 +75,8 @@ async function getDepartment(t) {
                                             <th>Student Roll No</th>
                                             <th>Contact Number</th>
                                             <th>Email</th>
-                                            <th>Department</th>
-                                            <th>Franchise</th>
+                                            <th>House</th>
+                                            <th>School</th>
                                         </tr>
                                     </thead>
                                     <tbody id="getStudents">

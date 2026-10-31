@@ -10,6 +10,71 @@ require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('https://na
 // $path = "http://65.0.164.127:8000";
 $path = nt_api('https://nayantarabyspacs.co.in');
 
+// School settings fields shared by the add ($p = '') and edit ($p = 'edit') modals.
+function franchiseSettingsFields($p)
+{
+    ?>
+    <div class="col-12">
+        <hr>
+        <h6 class="mb-3">School Settings</h6>
+    </div>
+    <div class="form-group col-md-12">
+        <label>School Icon / Logo (JPG or PNG)</label>
+        <div class="d-flex align-items-center">
+            <img id="<?= $p ?>logoPreview" src="" alt="" style="width:64px;height:64px;object-fit:contain;border:1px solid #ddd;border-radius:6px;margin-right:12px;display:none;">
+            <input type="file" id="<?= $p ?>logo" accept="image/png,image/jpeg" class="form-control-file" onchange="previewLogo(this, '<?= $p ?>')">
+        </div>
+        <input type="hidden" id="<?= $p ?>logoPath">
+        <small class="text-muted">Recommended: 512×512 px square PNG (1:1 ratio, transparent background, max 512 KB)</small>
+    </div>
+    <div class="form-group col-md-6">
+        <div class="custom-control custom-switch">
+            <input type="checkbox" class="custom-control-input" id="<?= $p ?>allow_parental_recharge" checked onchange="updateSettingsHints('<?= $p ?>')">
+            <label class="custom-control-label" for="<?= $p ?>allow_parental_recharge">Allow Parental Recharge</label>
+        </div>
+        <small class="text-muted" id="<?= $p ?>rechargeHint"></small>
+    </div>
+    <div class="form-group col-md-6">
+        <div class="custom-control custom-switch">
+            <input type="checkbox" class="custom-control-input" id="<?= $p ?>allow_audio_calls" checked onchange="updateSettingsHints('<?= $p ?>')">
+            <label class="custom-control-label" for="<?= $p ?>allow_audio_calls">Allow Audio / Voice Calls</label>
+        </div>
+        <small class="text-muted" id="<?= $p ?>audioHint"></small>
+    </div>
+    <div class="form-group col-md-6">
+        <label>Video Rate (Coins/min)</label>
+        <input type="number" step="0.01" min="0" name="<?= $p ?>video_rate" id="<?= $p ?>video_rate" value="1" class="form-control">
+    </div>
+    <div class="form-group col-md-6">
+        <label>Audio Rate (Coins/min)</label>
+        <input type="number" step="0.01" min="0" name="<?= $p ?>audio_rate" id="<?= $p ?>audio_rate" value="1" class="form-control">
+    </div>
+    <div class="form-group col-md-6">
+        <label>Parent Account Activation Fee (Coins / Tokens)</label>
+        <input type="number" step="0.01" min="0" name="<?= $p ?>activation_fee" id="<?= $p ?>activation_fee" value="0" class="form-control">
+        <small class="text-muted">One-time token fee deducted from student balance when a parent activates their account.</small>
+    </div>
+    <div class="form-group col-md-6">
+        <label>Max Calls per Day</label>
+        <input type="number" step="1" min="0" name="<?= $p ?>max_calls_per_day" id="<?= $p ?>max_calls_per_day" value="0" class="form-control" oninput="updateSettingsHints('<?= $p ?>')">
+        <small class="text-muted">e.g. 5 calls/day, 0 for unlimited</small>
+    </div>
+    <div class="form-group col-md-6">
+        <label>Daily Duration Allowance (Min)</label>
+        <input type="number" step="1" min="0" name="<?= $p ?>daily_duration_min" id="<?= $p ?>daily_duration_min" value="0" class="form-control" oninput="updateSettingsHints('<?= $p ?>')">
+        <small class="text-muted">e.g. 10 mins total pool, 0 for unlimited</small>
+    </div>
+    <div class="form-group col-md-6">
+        <label>Min Call Duration to Count Towards Limit (Seconds)</label>
+        <input type="number" step="1" min="0" name="<?= $p ?>min_call_duration_sec" id="<?= $p ?>min_call_duration_sec" value="30" class="form-control">
+        <small class="text-muted">Calls shorter than this threshold (e.g. quick drops or glitches) will not count against the daily limit. (Default: 30 seconds)</small>
+    </div>
+    <div class="col-12">
+        <div class="alert alert-info mb-0" id="<?= $p ?>limitSummary"></div>
+    </div>
+    <?php
+}
+
 ?>
 
 <script>
@@ -28,6 +93,13 @@ $(document).ready(function() {
         aaSorting: [],
         columns: [{
                 data: "index"
+            },
+            {
+                data: "logo",
+                orderable: false,
+                render: function(logo) {
+                    return logo ? `<img src="<?= $path ?>/${logo}" alt="" style="width:36px;height:36px;object-fit:contain;">` : '';
+                }
             },
             {
                 data: "franchiseName"
@@ -69,8 +141,74 @@ $(document).ready(function() {
     });
 });
 
-$(document).on('submit', '#addfranchise', function(e) {
+function previewLogo(input, p) {
+    const img = document.getElementById(p + 'logoPreview');
+    const file = input.files[0];
+    if (!file) return;
+    img.src = URL.createObjectURL(file);
+    img.style.display = '';
+}
+
+function updateSettingsHints(p) {
+    const recharge = document.getElementById(p + 'allow_parental_recharge').checked;
+    const audio = document.getElementById(p + 'allow_audio_calls').checked;
+    document.getElementById(p + 'rechargeHint').textContent = recharge ?
+        'Enabled: Parents can buy Spacs Coins / call tokens for students in this school.' :
+        'Disabled: Parents cannot buy Spacs Coins / call tokens for students in this school.';
+    document.getElementById(p + 'audioHint').textContent = audio ?
+        'Enabled: Students can make voice/audio calls to parents.' :
+        'Disabled: Students can only make video calls to parents.';
+    const calls = Number(document.getElementById(p + 'max_calls_per_day').value) || 0;
+    const mins = Number(document.getElementById(p + 'daily_duration_min').value) || 0;
+    document.getElementById(p + 'limitSummary').textContent =
+        `ℹ️ Students can make ${calls ? 'up to ' + calls : 'unlimited'} calls totaling ${mins ? 'up to ' + mins + ' mins' : 'unlimited time'} daily. Individual call length is controlled by each House.`;
+}
+
+// Uploads the chosen logo (if any) and resolves with the stored path, or the current one.
+async function uploadLogo(p) {
+    const file = document.getElementById(p + 'logo').files[0];
+    const current = document.getElementById(p + 'logoPath').value;
+    if (!file) return current;
+    const form = new FormData();
+    form.append('logo', file);
+    let res = await fetch('<?= $path ?>/api/franchise-logo', {
+        method: 'POST',
+        body: form
+    });
+    res = await res.json();
+    if (res.error == true) throw new Error(res.message);
+    return res.data.logo;
+}
+
+function settingsPayload(p, logo) {
+    return {
+        logo: logo,
+        allow_parental_recharge: document.getElementById(p + 'allow_parental_recharge').checked ? 1 : 0,
+        allow_audio_calls: document.getElementById(p + 'allow_audio_calls').checked ? 1 : 0,
+        video_rate: document.getElementById(p + 'video_rate').value.trim(),
+        audio_rate: document.getElementById(p + 'audio_rate').value.trim(),
+        activation_fee: document.getElementById(p + 'activation_fee').value.trim(),
+        max_calls_per_day: document.getElementById(p + 'max_calls_per_day').value.trim(),
+        daily_duration_min: document.getElementById(p + 'daily_duration_min').value.trim(),
+        min_call_duration_sec: document.getElementById(p + 'min_call_duration_sec').value.trim(),
+    }
+}
+
+$(document).ready(function() {
+    updateSettingsHints('');
+    updateSettingsHints('edit');
+});
+
+$(document).on('submit', '#addfranchise', async function(e) {
     e.preventDefault();
+    if (!$(this).valid()) return;
+    let logo;
+    try {
+        logo = await uploadLogo('');
+    } catch (err) {
+        Swal.fire('error!', err.message, 'error');
+        return;
+    }
     const item = {
         franchiseName: document.getElementById("franchiseName").value.trim(),
         franchiserName: document.getElementById("franchiserName").value.trim(),
@@ -82,6 +220,7 @@ $(document).on('submit', '#addfranchise', function(e) {
         pincode: document.getElementById("pincode").value.trim(),
         by_plan_permision: document.getElementById('by_plan_permision').value.trim(),
         remark: document.getElementById("remark").value.trim(),
+        ...settingsPayload('', logo),
     }
     $.ajax({
         url: $(this).attr("action"),
@@ -125,10 +264,32 @@ async function getUpdateValue(Id) {
     document.getElementById("editpincode").value = get.data[0].pincode;
     document.getElementById("editby_plan_permision").value = get.data[0].by_plan_permision;
     document.getElementById("editremark").value = get.data[0].remark;
+
+    const row = get.data[0];
+    const preview = document.getElementById("editlogoPreview");
+    document.getElementById("editlogo").value = "";
+    document.getElementById("editlogoPath").value = row.logo || "";
+    preview.src = row.logo ? '<?= $path ?>/' + row.logo : "";
+    preview.style.display = row.logo ? "" : "none";
+    document.getElementById("editallow_parental_recharge").checked = row.allow_parental_recharge != 0;
+    document.getElementById("editallow_audio_calls").checked = row.allow_audio_calls != 0;
+    ['video_rate', 'audio_rate', 'activation_fee', 'max_calls_per_day', 'daily_duration_min', 'min_call_duration_sec']
+    .forEach((field) => {
+        if (row[field] != null) document.getElementById("edit" + field).value = Number(row[field]);
+    });
+    updateSettingsHints('edit');
 }
 
-$(document).on('submit', '#editfranchise', function(e) {
+$(document).on('submit', '#editfranchise', async function(e) {
     e.preventDefault();
+    if (!$(this).valid()) return;
+    let logo;
+    try {
+        logo = await uploadLogo('edit');
+    } catch (err) {
+        Swal.fire('error!', err.message, 'error');
+        return;
+    }
     const item = {
         id: document.getElementById("editId").value.trim(),
         franchiseName: document.getElementById("editfranchiseName").value.trim(),
@@ -141,6 +302,7 @@ $(document).on('submit', '#editfranchise', function(e) {
         pincode: document.getElementById("editpincode").value.trim(),
         by_plan_permision: document.getElementById('editby_plan_permision').value.trim(),
         remark: document.getElementById("editremark").value.trim(),
+        ...settingsPayload('edit', logo),
     }
     $.ajax({
         url: $(this).attr("action"),
@@ -263,11 +425,12 @@ async function getCityName(t) {
     let getState = await fetch('<?= $path ?>/api/get-cityByStateId/' + id);
     getState = await getState.json();
     var state = document.getElementById("city")
-    state.innerHTML = "<option value='' selected disabled>---select---</option>"
+    state.innerHTML = "<option value='' selected>---select---</option>"
     document.getElementById("pincode").value = "";
+    if (!Array.isArray(getState)) return; // state without cities: city stays empty
     state.innerHTML += getState.map((data, index) =>
         `<option value="${data.id}">${data.name}</option>`
-    )
+    ).join('')
 }
 
 async function updateCityName(t, cityid) {
@@ -275,7 +438,8 @@ async function updateCityName(t, cityid) {
     let getState = await fetch('<?= $path ?>/api/get-cityByStateId/' + id);
     getState = await getState.json();
     var city = document.getElementById("editcity")
-    city.innerHTML = "<option value='' selected disabled>---select---</option>"
+    city.innerHTML = "<option value='' selected>---select---</option>"
+    if (!Array.isArray(getState)) return; // state without cities: city stays empty
     getState.forEach((data, index) => {
         var selected = "";
         if (cityid != 0) {
@@ -293,11 +457,12 @@ async function updateCity(t) {
     let getState = await fetch('<?= $path ?>/api/get-cityByStateId/' + id);
     getState = await getState.json();
     var city = document.getElementById("editcity")
-    city.innerHTML = "<option value='' selected disabled>---select---</option>"
+    city.innerHTML = "<option value='' selected>---select---</option>"
     document.getElementById("editpincode").value = "";
+    if (!Array.isArray(getState)) return; // state without cities: city stays empty
     city.innerHTML += getState.map((data, index) =>
         `<option value="${data.id}">${data.name}</option>`
-    )
+    ).join('')
 }
 </script>
 
@@ -325,7 +490,8 @@ async function updateCity(t) {
                                     <thead>
                                         <tr>
                                             <th>S. No</th>
-                                            <th>Franchise Name</th>
+                                            <th>Logo</th>
+                                            <th>School Name</th>
                                             <th>Franchiser Name</th>
                                             <th>Email</th>
                                             <th>Password</th>
@@ -412,7 +578,7 @@ async function updateCity(t) {
                                 </select>
                             </div>
                             <div class="form-group col-md-6">
-                                <label>City<span class="req" style="color:red">*</span></label>
+                                <label>City</label>
                                 <select name="city" id="city" class="form-control">
                                 </select>
                             </div>
@@ -432,6 +598,7 @@ async function updateCity(t) {
                                 <label>Remark(optional)</label>
                                 <input type="text" name="remark" id="remark" class="form-control">
                             </div>
+                            <?php franchiseSettingsFields(''); ?>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -502,7 +669,7 @@ async function updateCity(t) {
                                     onchange="updateCity(this)"></select>
                             </div>
                             <div class="form-group col-md-6">
-                                <label>City<span class="req" style="color:red">*</span></label>
+                                <label>City</label>
                                 <select name="editcity" id="editcity" class="form-control"></select>
                             </div>
                             <div class="form-group col-md-6">
@@ -521,6 +688,7 @@ async function updateCity(t) {
                                 <label>Remark(optional)</label>
                                 <input type="text" name="editremark" id="editremark" class="form-control">
                             </div>
+                            <?php franchiseSettingsFields('edit'); ?>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -550,7 +718,6 @@ async function updateCity(t) {
                 },
                 address: 'required',
                 state: 'required',
-                city: 'required',
                 pincode: {
                     required: true,
                     minlength: 6,
@@ -580,9 +747,6 @@ async function updateCity(t) {
                 state: {
                     required: "Please enter state",
                 },
-                city: {
-                    required: "Please enter city",
-                },
                 pincode: {
                     required: "Please enter pincode",
                     minlength: "Please field accept min 6 digits",
@@ -611,7 +775,6 @@ async function updateCity(t) {
                 },
                 editaddress: 'required',
                 editstate: 'required',
-                editcity: 'required',
                 editpincode: {
                     required: true,
                     minlength: 6,
@@ -640,9 +803,6 @@ async function updateCity(t) {
                 },
                 editstate: {
                     required: "Please select state",
-                },
-                editcity: {
-                    required: "Please enter city",
                 },
                 editpincode: {
                     required: "Please enter pincode",

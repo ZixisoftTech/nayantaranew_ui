@@ -48,6 +48,33 @@ function franchiseFromToken(req) {
 const esc = (v) => (v === null || v === undefined || v === '') ? null : String(v)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+/* person names -------------------------------------------------------------- */
+
+/**
+ * SQL for a person's name: the live record's name, falling back to the copy a table stored at the time
+ * (tbl_callhistory.student_name, tbl_student_issue.student_name, ...) when the record has been deleted
+ * or its name is empty / only a number (some students were renamed to their phone or roll no after
+ * older calls stored their real name). The copies go stale when a name is corrected, so a real live
+ * name always wins.
+ */
+const liveName = (live, copy) => (copy ? `CASE WHEN TRIM(${live}) REGEXP '[^0-9 +]' THEN TRIM(${live}) ELSE ${copy} END` : live);
+
+/* same muted dash nt-table.js renders for an empty cell */
+const EMPTY_CELL = '<span class="nt-empty">—</span>';
+
+/**
+ * Cell HTML for a Name column. Some names were saved as a phone or roll number (only digits, spaces
+ * or '+'); the real name isn't stored anywhere, so show the empty placeholder plus the roll no
+ * ("— (Roll 2029)") instead of passing a number off as a name. Returns null (plain dash) when there
+ * is nothing to show.
+ */
+const personName = (name, rollNo) => {
+    const text = name === null || name === undefined ? '' : String(name).trim();
+    if (!/^[\d\s+]*$/.test(text)) return esc(text);
+    const roll = rollNo === null || rollNo === undefined ? '' : String(rollNo).trim();
+    return roll ? `${EMPTY_CELL} (Roll ${esc(roll)})` : null;
+};
+
 /* summary metrics ---------------------------------------------------------- */
 
 const metricSelect = (metrics) => metrics.map((m, i) => `${m.sql} AS m${i}${m.hint && m.hint.sql ? `, ${m.hint.sql} AS h${i}` : ''}`).join(', ');
@@ -176,23 +203,37 @@ function dateFilters(req, column, filter) {
     return filter;
 }
 
-const MMSS = (col) => `CONCAT(LPAD(FLOOR(${col} / 60), 2, '0'), ':', LPAD(MOD(${col}, 60), 2, '0'))`;
+// mm:ss; minutes keep growing past 99 (LPAD alone would cut 100+ minutes down to two digits)
+const MMSS = (col) => `CONCAT(LPAD(FLOOR(${col} / 60), GREATEST(2, LENGTH(FLOOR(${col} / 60))), '0'), ':', LPAD(MOD(${col}, 60), 2, '0'))`;
+
+/* call history (admin & franchise) ----------------------------------------- */
+
+const CALL_FROM = `tbl_callhistory c
+    {student} JOIN tbl_student s ON s.id = c.student_id
+    LEFT JOIN tbl_parents p ON p.id = c.parent_id`;
+const CALL_STUDENT = liveName('s.name', 'c.student_name');
+const CALL_PARENT = liveName('p.name', 'c.parent_name');
+const CALL_SELECT = `c.id, c.student_id, c.parent_id, ${CALL_STUDENT} AS student_name, ${CALL_PARENT} AS parent_name,
+    s.student_roll_no, ${MMSS('c.minute')} AS minutes, DATE_FORMAT(c.created_at, '%d-%m-%Y %H:%i') AS dates`;
+const CALL_SEARCH = [CALL_STUDENT, CALL_PARENT, 's.student_roll_no'];
+const CALL_ORDER = { index: 'c.id', date: 'c.created_at', student_name: CALL_STUDENT, parent_name: CALL_PARENT, minutes: '(c.minute + 0)' };
+const callRow = (r, i) => ({
+    _ref: { student: r.student_id, parent: r.parent_id },
+    index: i, date: r.dates, student_name: personName(r.student_name, r.student_roll_no), parent_name: personName(r.parent_name),
+    minutes: r.minutes,
+});
 
 /* super admin: call history ------------------------------------------------ */
 
 const adminCallHistory = list({
     metrics: M.calls('c.minute'),
-    from: 'tbl_callhistory c LEFT JOIN tbl_student s ON s.id = c.student_id',
+    from: CALL_FROM.replace('{student}', 'LEFT'),
     where: (req) => dateFilters(req, 'c.created_at', studentFilters(req, 's', { parentCol: 'c.parent_id' })),
-    select: `c.id, c.student_id, c.parent_id, c.student_name, c.parent_name, ${MMSS('c.minute')} AS minutes,
-             DATE_FORMAT(c.created_at, '%d-%m-%Y') AS dates`,
-    search: ['c.student_name', 'c.parent_name', 's.student_roll_no'],
-    order: { index: 'c.id', date: 'c.created_at', student_name: 'c.student_name', parent_name: 'c.parent_name', minutes: 'c.minute' },
+    select: CALL_SELECT,
+    search: CALL_SEARCH,
+    order: CALL_ORDER,
     defaultOrder: 'c.created_at DESC',
-    row: (r, i) => ({
-        _ref: { student: r.student_id, parent: r.parent_id },
-        index: i, date: r.dates, student_name: esc(r.student_name), parent_name: esc(r.parent_name), minutes: r.minutes,
-    }),
+    row: callRow,
 });
 
 /* super admin: transactions (plan purchases) ------------------------------- */
@@ -201,14 +242,14 @@ const adminTransactions = list({
     metrics: M.purchases,
     from: 'tbl_plan_purchase pp LEFT JOIN tbl_student s ON s.id = pp.student_id',
     where: (req) => dateFilters(req, 'pp.created_at', studentFilters(req, 's', { parentCol: 'pp.parent_id' })),
-    select: `pp.id, pp.student_id, s.name, pp.plan_name, pp.plan_price AS price, FLOOR(pp.plan_min / 60) AS minute,
+    select: `pp.id, pp.student_id, s.name, s.student_roll_no, pp.plan_name, pp.plan_price AS price, FLOOR(pp.plan_min / 60) AS minute,
              DATE_FORMAT(pp.created_at, '%d-%m-%Y') AS dates`,
     search: ['pp.plan_name', 's.name', 's.student_roll_no'],
     order: { index: 'pp.id', purchase_date: 'pp.created_at', name: 's.name', plan_name: 'pp.plan_name', price: 'pp.plan_price', minute: 'pp.plan_min' },
     defaultOrder: 'pp.created_at DESC',
     row: (r, i) => ({
         _ref: { name: 'student', student: r.student_id },
-        index: i, purchase_date: r.dates, name: esc(r.name), plan_name: esc(r.plan_name), price: r.price, minute: r.minute,
+        index: i, purchase_date: r.dates, name: personName(r.name, r.student_roll_no), plan_name: esc(r.plan_name), price: r.price, minute: r.minute,
     }),
 });
 
@@ -246,7 +287,7 @@ const adminStudents = list({
     defaultOrder: 's.id DESC',
     row: (r, i) => ({
         _ref: { name: 'student', student: r.id, franchise: r.franchise_id, department: r.department_id },
-        index: i, name: esc(r.name), roll_no: esc(r.student_roll_no), contact: esc(r.contact), email: esc(r.email), minutes: r.minutes,
+        index: i, name: personName(r.name, r.student_roll_no), roll_no: esc(r.student_roll_no), contact: esc(r.contact), email: esc(r.email), minutes: r.minutes,
         franchise_name: esc(r.franchise_name), department_name: esc(r.department_name),
         action: `<a href="javascript:void(0);" data-toggle="modal" data-target=".edit" class="btn-sm" onclick="getMin(${r.id})"><i class="bx bx-edit-alt"></i></a>`,
     }),
@@ -271,7 +312,7 @@ const assignPlanStudents = list({
         _ref: { name: 'student', student: r.id, franchise: r.franchise_id, department: r.department_id },
         index: i,
         checkbox: `<input type="checkbox" value="${r.id}" class="checkbox" data-id="${r.id}">`,
-        name: esc(r.name), student_roll_no: esc(r.student_roll_no), contact: esc(r.contact), email: esc(r.email),
+        name: personName(r.name, r.student_roll_no), student_roll_no: esc(r.student_roll_no), contact: esc(r.contact), email: esc(r.email),
         department_name: esc(r.department_name), franchise_name: esc(r.franchise_name),
     }),
 });
@@ -302,8 +343,8 @@ const adminParents = list({
     defaultOrder: 'p.id DESC',
     row: (r, i) => ({
         _ref: { name: 'parent', parent: r.id, student: r.student_id },
-        index: i, student_roll_no: esc(r.student_roll_no), student_name: esc(r.student_name),
-        name: esc(r.name), contact: esc(r.contact), email: esc(r.email), password: esc(r.password),
+        index: i, student_roll_no: esc(r.student_roll_no), student_name: personName(r.student_name, r.student_roll_no),
+        name: personName(r.name), contact: esc(r.contact), email: esc(r.email), password: esc(r.password),
         action: r.status == 1 ? `<button class="btn-success" onClick="parentLogout(${r.id})">Logout</button>` : '',
     }),
 });
@@ -324,20 +365,16 @@ function franchiseScope(req, alias, parentCol) {
 
 const franchiseCallHistory = list({
     metrics: M.calls('c.minute'),
-    from: 'tbl_callhistory c INNER JOIN tbl_student s ON s.id = c.student_id',
+    from: CALL_FROM.replace('{student}', 'INNER'),
     where: (req) => {
         const f = franchiseScope(req, 's', 'c.parent_id');
         return f && dateFilters(req, 'c.created_at', f);
     },
-    select: `c.id, c.student_id, c.parent_id, c.student_name, c.parent_name, ${MMSS('c.minute')} AS minutes,
-             DATE_FORMAT(c.created_at, '%d-%m-%Y') AS dates, DATE_FORMAT(c.created_at, '%H:%i:%s') AS times`,
-    search: ['c.student_name', 'c.parent_name', 's.student_roll_no'],
-    order: { index: 'c.id', date: 'c.created_at', student_name: 'c.student_name', parent_name: 'c.parent_name', minutes: 'c.minute' },
+    select: CALL_SELECT,
+    search: CALL_SEARCH,
+    order: CALL_ORDER,
     defaultOrder: 'c.created_at DESC',
-    row: (r, i) => ({
-        _ref: { student: r.student_id, parent: r.parent_id },
-        index: i, date: `${r.dates} and ${r.times}`, student_name: esc(r.student_name), parent_name: esc(r.parent_name), minutes: r.minutes,
-    }),
+    row: callRow,
 });
 
 const franchiseTransactions = list({
@@ -347,14 +384,14 @@ const franchiseTransactions = list({
         const f = franchiseScope(req, 's', 'pp.parent_id');
         return f && dateFilters(req, 'pp.created_at', f);
     },
-    select: `pp.id, pp.student_id, s.name, pp.plan_name, pp.plan_price AS price, FLOOR(pp.plan_min / 60) AS minute,
+    select: `pp.id, pp.student_id, s.name, s.student_roll_no, pp.plan_name, pp.plan_price AS price, FLOOR(pp.plan_min / 60) AS minute,
              DATE_FORMAT(pp.created_at, '%d-%m-%Y') AS dates`,
     search: ['pp.plan_name', 's.name', 's.student_roll_no'],
     order: { index: 'pp.id', purchase_date: 'pp.created_at', name: 's.name', plan_name: 'pp.plan_name', price: 'pp.plan_price', minute: 'pp.plan_min' },
     defaultOrder: 'pp.created_at DESC',
     row: (r, i) => ({
         _ref: { name: 'student', student: r.student_id },
-        index: i, purchase_date: r.dates, name: esc(r.name), plan_name: esc(r.plan_name), price: r.price, minute: r.minute,
+        index: i, purchase_date: r.dates, name: personName(r.name, r.student_roll_no), plan_name: esc(r.plan_name), price: r.price, minute: r.minute,
     }),
 });
 
@@ -419,44 +456,14 @@ const adminSubscriptions = list({
     }),
 });
 
-
-/* super admin: student summary (available vs used minutes) ----------------- */
-// Call minutes are totalled once per request in a grouped sub-select instead of a
-// correlated sub-query per student (which took ~37s for a full export on 184k calls).
-
-const studentSummary = list({
-    metrics: [
-        { label: 'Students', sql: 'COUNT(*)', icon: 'bx-user' },
-        { label: 'Talk time available', sql: N('SUM(GREATEST(s.total_talktime, 0))'), fmt: 'duration', icon: 'bx-time-five', tone: 'green' },
-        { label: 'Talk time used', sql: N('SUM(cu.secs)'), fmt: 'duration', icon: 'bx-phone-call', tone: 'violet',
-          hint: { text: '{v} avg per student', sql: N('AVG(COALESCE(cu.secs, 0))'), fmt: 'duration' } },
-        { label: 'Overdrawn', sql: N('SUM(s.total_talktime < 0)'), icon: 'bx-error-circle', tone: 'red',
-          hint: { text: '{v} never called', sql: N('SUM(cu.secs IS NULL)') } },
-    ],
-    from: `tbl_student s
-        LEFT JOIN tbl_franchise f ON f.Id = s.franchise_id
-        LEFT JOIN tbl_department d ON d.id = s.department_id
-        LEFT JOIN (SELECT student_id, SUM(minute) AS secs FROM tbl_callhistory GROUP BY student_id) cu ON cu.student_id = s.id`,
-    where: (req) => studentFilters(req, 's', { departmentParam: 'department_id' }),
-    select: `s.id, s.name, s.student_roll_no, s.franchise_id, s.department_id,
-             FLOOR(s.total_talktime / 60) AS talk_time_min, FLOOR(cu.secs / 60) AS used_min,
-             f.franchiseName AS franchise_name, d.name AS department_name`,
-    search: ['s.name', 's.student_roll_no', 'f.franchiseName', 'd.name'],
-    order: { index: 's.id', name: 's.name', student_roll_no: 's.student_roll_no', franchise_name: 'f.franchiseName',
-             department_name: 'd.name', talk_time_min: 's.total_talktime', used_min: 'cu.secs' },
-    defaultOrder: 's.id DESC',
-    row: (r, i) => ({
-        _ref: { name: 'student', student: r.id, franchise: r.franchise_id, department: r.department_id },
-        index: i, name: esc(r.name), student_roll_no: esc(r.student_roll_no), franchise_name: esc(r.franchise_name),
-        department_name: esc(r.department_name), talk_time_min: r.talk_time_min, used_min: r.used_min,
-    }),
-});
-
 module.exports = {
     metricSelect,
     metricValues,
     M,
     N,
+    esc,
+    liveName,
+    personName,
     adminCallHistory,
     adminTransactions,
     adminStudents,
@@ -466,5 +473,4 @@ module.exports = {
     franchiseTransactions,
     adminDepartments,
     adminSubscriptions,
-    studentSummary,
 };

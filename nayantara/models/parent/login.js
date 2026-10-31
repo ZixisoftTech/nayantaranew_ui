@@ -1,5 +1,6 @@
 const dataBase = require('../../config/db');
 const jwt = require('jsonwebtoken');
+const { activateParent } = require('../call_rules');
 const multer = require('multer');
 const { default: axios } = require("axios");
 const FlexApiBase = require('twilio/lib/rest/FlexApiBase');
@@ -62,6 +63,8 @@ const Parentlogin = (req, res, next) => {
                                 if (parentfind[0].contact == '9754764248' || parentfind[0].contact == '8839608504' || parentfind[0].contact == '9301778530') {
                                     dataBase.query('UPDATE tbl_parents set status = ?,fcm_token = ? WHERE contact = ?', [status, fcmtoken, contact], function (error, results, fields) {
                                         if (results) {
+                                            // first login activates the account and charges the school's activation fee once
+                                            activateParent(parentfind[0]);
                                             return res.status(200).send({ error: false, message: "You are successfully login", data: parentfind[0] });
                                         }
                                         else {
@@ -74,6 +77,8 @@ const Parentlogin = (req, res, next) => {
                                     } else {
                                         dataBase.query('UPDATE tbl_parents set status = ?,fcm_token = ? WHERE contact = ?', [status, fcmtoken, contact], function (error, results, fields) {
                                             if (results) {
+                                                // first login activates the account and charges the school's activation fee once
+                                                activateParent(parentfind[0]);
                                                 return res.status(200).send({ error: false, message: "You are successfully login", data: parentfind[0] });
                                             }
                                             else {
@@ -147,6 +152,13 @@ const Parentotp = async (req, res, next) => {
                         else {
                             const contact = results[0].contact;
                             const id = results[0].id;
+                            // SMS only reaches Indian numbers; international parents use the fixed OTP set when they were added
+                            if (String(contact).startsWith('+')) {
+                                if (results[0].otp == null) {
+                                    return res.status(200).send({ error: true, message: "OTP is not set for this number. Please ask your school for your login OTP.", data: null });
+                                }
+                                return res.status(200).send({ error: false, message: "Use the login OTP given by your school", data: { id: id } });
+                            }
                             const OTP = Math.floor(1000 + Math.random() * 9000).toString();
                             dataBase.query('UPDATE tbl_parents SET otp = ? WHERE contact = ?', [OTP, contact], async function (error, updateOtp, fields) {
                                 if (updateOtp) {

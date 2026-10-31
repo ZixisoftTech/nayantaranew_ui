@@ -1,6 +1,6 @@
 <?php include("../include/head.php") ?>
-<?php include("../include/franchise_navbar.php") ?>
-<?php include("../include/sidebar_franchise.php") ?>
+<?php include("../include/navbar.php") ?>
+<?php include("../include/sidebar_superadmin.php") ?>
 <?php 
 // $basePath = 'http://localhost/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 
@@ -12,12 +12,6 @@ $path = nt_api('https://nayantarabyspacs.co.in');
 
 ?>
 
-<script arc="https://code.jquery.com/jquery-3.5.1.js"></script>
-<script arc="https://cdn.datatables.net/1.13.3/js/jquery.dataTables.min.js"></script>
-<script arc="https://cdn.datatables.net/buttons/2.3.5/js/dataTables.buttons.min.js"></script>
-<script arc="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
-<script arc="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
-<script arc="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
 
 <script>
 $(document).ready(function() {
@@ -48,20 +42,20 @@ async function getParents(id) {
         serverSide: true,
         serverMethod: "get",
         ajax: {
-            url: '<?= $path ?>/managestudents/get-studentskipbyfranchise/' + id,
+            url: '<?= $path ?>/managestudents/get-parentsbyfranchise/' + id,
         },
         aaSorting: [],
         columns: [{
                 data: "index"
             },
             {
-                data: 'checkbox'
-            },
-            {
                 data: "student_roll_no"
             },
             {
                 data: "student_name"
+            },
+            {
+                data: "name"
             },
             {
                 data: "contact"
@@ -73,9 +67,6 @@ async function getParents(id) {
                 data: "password"
             },
             {
-                data: "department"
-            },
-            {
                 data: "action"
             },
         ],
@@ -85,133 +76,6 @@ async function getParents(id) {
         }]
     });
 };
-
-var student_ids = [];
-$(document).on('click', '.checkbox', function() {
-    if ($(this).is(':checked')) {
-        student_ids.push($(this).val());
-    } else {
-        student_ids.pop($(this).val());
-    }
-});
-
-$(document).ready(function() {
-    $('#select_all').on('click', function() {
-        if (this.checked) {
-            $('.checkbox').each(function() {
-                this.checked = true;
-                if ($(this).is(':checked')) {
-                    student_ids.push($(this).val());
-                }
-            });
-        } else {
-            $('.checkbox').each(function() {
-                this.checked = false;
-                student_ids.pop($(this).val());
-            });
-        }
-    });
-})
-
-$(document).on('click', '.bulkdelete', function() {
-    Swal.fire({
-        title: 'Are you sure?',
-        text: "You won't be able to revert this!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, delete it!',
-        cancelButtonText: "No, cancel please!",
-        closeOnConfirm: false,
-        closeOnCancel: false
-    }).then((result) => {
-        if (result.dismiss === Swal.DismissReason.cancel || result.dismiss === Swal.DismissReason
-            .backdrop) {
-            Swal.fire("Cancelled", "Your data is safe", "success");
-        } else {
-            // $('#myModal').modal('show');
-            bulkDelete();
-            // Swal.fire("Deleted", "Your data has been deleted", "success");
-        }
-    });
-});
-
-async function bulkDelete() {
-    $.ajax({
-        url: '<?= $path. '/managestudents/delete-bulkskipstudent' ?>',
-        type: 'POST',
-        data: {
-            studentid: JSON.stringify(student_ids),
-        },
-        dataType: 'json',
-        success: function(data, textStatus, jqXHR) {
-            if (data.error == false) {
-                Swal.fire(
-                    'success!',
-                    `${data.message}`,
-                    'success'
-                );
-                setTimeout(() => {
-                    document.location.reload();
-                }, 1000);
-            } else {
-                Swal.fire(
-                    'error!',
-                    "Data not deleted",
-                    'error',
-                );
-            };
-        }
-    });
-};
-
-$(document).on('click', '.delete', function() {
-    var id = $(this).data('id');
-    Swal.fire({
-        title: 'Are you sure?',
-        text: "You won't be able to revert this!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, delete it!',
-        cancelButtonText: "No, cancel please!",
-        closeOnConfirm: false,
-        closeOnCancel: false
-    }).then((result) => {
-        if (result.dismiss === Swal.DismissReason.cancel || result.dismiss === Swal.DismissReason
-            .backdrop) {
-            Swal.fire("Cancelled", "Your data is safe", "success");
-        } else {
-            deleteStudentSkip(id);
-            Swal.fire("Deleted", "Your data has been deleted", "success");
-        }
-    });
-});
-
-async function deleteStudentSkip(id) {
-    let del = await fetch('<?= $path ?>/managestudents/delete-skipdatastudent/' + id, {
-        method: 'DELETE'
-    })
-    var data = await del.json();
-    if (data.error == true) {
-        Swal.fire(
-            'error!',
-            `${data.message}`,
-            'error'
-        );
-    } else {
-        Swal.fire(
-            'success!',
-            `${data.message}`,
-            'success',
-        );
-        setTimeout(() => {
-            document.location.reload();
-        }, 1000);
-    }
-}
 </script>
 
 <body class="bg2" data-sidebar="dark">
@@ -223,10 +87,9 @@ async function deleteStudentSkip(id) {
                         <div class="header">
                             <div class="row mt-3 mr-2 ml-2">
                                 <div class="col-md-6 text-left">
-                                    <h5>Student Skip Data</h5>
+                                    <h5>Manage Parents</h5>
                                 </div>
                                 <div class="col-md-6 text-right">
-                                    <button type="button" class="btn btn-outline-danger bulkdelete" value="Store File" id="inport" name="import"><i class="bx bx-trash-alt"></i> Delete selected</button>
                                     <!-- <a href="javascript:void(0);" data-toggle="modal" data-target=".add"
                                         onclick="getStateName()" class="btn btn-primary create-btn">Create</a> -->
                                 </div>
@@ -239,16 +102,13 @@ async function deleteStudentSkip(id) {
                                     <thead>
                                         <tr>
                                             <th>S. No</th>
-                                            <th>
-                                                <input type="checkbox" id="select_all" /> Select all
-                                            </th>
                                             <th>Student Roll No</th>
                                             <th>Student Name</th>
-                                            <th>Contact Number</th>
+                                            <th>Parent Name</th>
+                                            <th>Contact</th>
                                             <th>Email</th>
                                             <th>Password</th>
-                                            <th>Department</th>
-                                            <th>Action</th>
+                                            <th>Login Status</th>
                                         </tr>
                                     </thead>
                                     <tbody id="getparents">

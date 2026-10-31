@@ -10,6 +10,7 @@
 const jwt = require('jsonwebtoken');
 const dataBase = require('../config/db');
 const { ready: schemaReady, live: LIVE } = require('./schema');
+const { liveName } = require('./lists');
 
 const SECRET = 'helloiamabhisheklodhi';
 const LOW_BALANCE = 300;   // seconds: "under 5 minutes"
@@ -22,7 +23,7 @@ const q = (sql, params) => new Promise((resolve, reject) => {
 function isAdmin(req) {
     const header = req.headers.authorization || '';
     const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-    try { return !!token && jwt.verify(token, SECRET).role === 'admin'; } catch (e) { return false; }
+    try { return !!token && ['admin', 'subadmin'].includes(jwt.verify(token, SECRET).role); } catch (e) { return false; }
 }
 
 // tbl_department_timeslots.day uses full day names, with Saturday stored as "Satuarday"
@@ -117,13 +118,14 @@ const overview = async (req, res) => {
                  (SELECT COUNT(*) FROM tbl_plan_purchase WHERE created_at >= CURDATE() - INTERVAL 1 DAY AND created_at < NOW() - INTERVAL 1 DAY) AS plans,
                  (SELECT COALESCE(SUM(plan_price), 0) FROM tbl_plan_purchase WHERE created_at >= CURDATE() - INTERVAL 1 DAY AND created_at < NOW() - INTERVAL 1 DAY) AS revenue,
                  (SELECT COUNT(DISTINCT student_id) FROM tbl_callhistory WHERE created_at >= CURDATE() - INTERVAL 1 DAY AND created_at < NOW() - INTERVAL 1 DAY) AS callers`, []),
-            q(`(SELECT 'student' AS kind, i.id, i.student_id AS person_id, i.student_name AS name, i.subject, i.message,
+            // tickets keep a copy of the name; prefer the live one (it may have been corrected since)
+            q(`(SELECT 'student' AS kind, i.id, i.student_id AS person_id, ${liveName('s.name', 'i.student_name')} AS name, i.subject, i.message,
                        DATE_FORMAT(i.created_at, '%Y-%m-%dT%H:%i:%s') AS created_at
-                  FROM tbl_student_issue i ORDER BY i.id DESC LIMIT 6)
+                  FROM tbl_student_issue i LEFT JOIN tbl_student s ON s.id = i.student_id ORDER BY i.id DESC LIMIT 6)
                UNION ALL
-               (SELECT 'parent' AS kind, i.id, i.parent_id AS person_id, i.parent_name AS name, i.subject, i.message,
+               (SELECT 'parent' AS kind, i.id, i.parent_id AS person_id, ${liveName('p.name', 'i.parent_name')} AS name, i.subject, i.message,
                        DATE_FORMAT(i.created_at, '%Y-%m-%dT%H:%i:%s') AS created_at
-                  FROM tbl_parents_issue i ORDER BY i.id DESC LIMIT 6)
+                  FROM tbl_parents_issue i LEFT JOIN tbl_parents p ON p.id = i.parent_id ORDER BY i.id DESC LIMIT 6)
                ORDER BY created_at DESC LIMIT 6`, []),
             q(`SELECT
                  (SELECT COUNT(*) FROM tbl_student_issue WHERE created_at >= NOW() - INTERVAL 7 DAY) AS student_week,

@@ -137,23 +137,17 @@
             'manage_franchise.php': 'admin.franchises',
             'student_tickets.php': 'admin.student_tickets',
             'parent_tickets.php': 'admin.parent_tickets',
-            'assign_plan_department.php': 'admin.assign_plan_department'
-        },
-        franchise: {
-            'manage_students.php': 'franchise.manage_students',
-            'manage_parents.php': 'franchise.manage_parents',
-            'student_skip.php': 'franchise.student_skip',
-            'parent_skip.php': 'franchise.parent_skip'
-        },
-        student: {
-            'call_history.php': 'student.call_history',
-            'transaction_history.php': 'student.transaction_history'
+            'assign_plan_department.php': 'admin.assign_plan_department',
+            // school pages (school accounts, or admins after picking a school)
+            'school_students.php': 'franchise.manage_students',
+            'school_parents.php': 'franchise.manage_parents',
+            'school_student_skip.php': 'franchise.student_skip',
+            'school_parent_skip.php': 'franchise.parent_skip'
         }
     };
-    var TOKENS = { super_admin: 'admintoken', franchise: 'franchisetoken', student: 'studentToken' };
 
     function portal() {
-        var m = /\/(super_admin|franchise|student)\/([^/?#]+)/.exec(location.pathname);
+        var m = /\/(super_admin)\/([^/?#]+)/.exec(location.pathname);
         return m ? { portal: m[1], page: m[2] } : null;
     }
 
@@ -172,7 +166,7 @@
         el.querySelector('.nt-metrics-grid').innerHTML = new Array(5).join('<div class="nt-metric nt-metric-skeleton"></div>');
 
         var token = null;
-        try { token = localStorage.getItem(TOKENS[where.portal]); } catch (e) { /* storage blocked */ }
+        try { token = localStorage.getItem(screen.indexOf('franchise.') === 0 ? 'franchisetoken' : 'admintoken'); } catch (e) { /* storage blocked */ }
         fetch(API + '/api/screen-metrics?screen=' + encodeURIComponent(screen), { headers: { Authorization: 'Bearer ' + (token || '') } })
             .then(function (res) { return res.json(); })
             .then(function (body) { if (body && !body.error) paint(el, body.data, ''); else el.remove(); })

@@ -1,99 +1,58 @@
 <?php include("../include/head.php") ?>
-<?php include("../include/student_navbar.php") ?>
-<?php include("../include/sidebar_student.php") ?>
+<?php include("../include/navbar.php") ?>
+<?php include("../include/sidebar_superadmin.php") ?>
 <?php 
-
-// $basePath = 'http://192.168.29.47/nayantara/nayantarafrontend'; 
+// $basePath = 'http://localhost/nayantara/nayantarafrontend'; 
 // $basePath = 'http://65.0.164.127/nayantarafrontend'; 
-require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('http://nayantarabyspacs.co.in'); 
+require_once __DIR__ . '/../include/config.php'; $basePath = nt_base('https://nayantarabyspacs.co.in'); 
 
-// $path = "http://192.168.29.47:8085";
-// $path = "http://65.0.164.127:8000"; 
-$path = nt_api('http://nayantarabyspacs.co.in:8085');
-
+// $path = "http://localhost:8085";
+// $path = "http://65.0.164.127:8000";
+$path = nt_api('https://nayantarabyspacs.co.in');
 ?>
 
-<script>
+<script type="text/javascript">
 async function getName() {
-    const post = await fetch("<?= $path ?>/api/get-studentname", {
+    const post = await fetch("<?= $path ?>/franchise/api/franchisename", {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                tokenStudent
+                franchisetoken
             }),
+
         })
         .then(response => response.json())
-        .then((data) => {
-            var Name = document.getElementById('studentname').innerText = data.data[0].name;
-            getCallHistory(data.data[0].id);
-            getTimeSchedule(data.data[0].id)
+        .then((response) => {
+            getDepartment(response.data.Id);
         }).catch((error) => {
             console.log("error =>", error);
         })
 }
 getName();
 
-async function getCallHistory(id) {
-    var dataTable = $("#callhistory").DataTable({
-        dom: 'Bfrtip',
-        buttons: [
-            'copy', 'csv', 'excel', 'pdf', 'print'
-        ],
-        processing: true,
-        serverSide: true,
-        serverMethod: "get",
-        ajax: {
-            url: '<?= $path ?>/api/get-webcallhistory/' + id,
-        },
-        aaSorting: [],
-        columns: [{
-                data: "index"
-            },
-            {
-                data: "date"
-            },
-            {
-                data: "student_name"
-            },
-            {
-                data: "parent_name"
-            },
-            {
-                data: "minute"
-            }
-        ],
-    });
-}
+async function getDepartment(t) {
+    var id = t;
+    let getName = await fetch('<?= $path ?>/api/get-department/' + id);
+    getName = await getName.json();
+    const departmentId = document.getElementById("department_id");
+    departmentId.innerHTML = "<option value='' selected disabled>--Select--</option>";
+    departmentId.innerHTML += getName.data.map((data, index) =>
+        `<option value=${data.id}>${data.name}</option>`
+    )
+};
 
-async function getTimeSchedule(studentId) {
-    var Id = studentId;
-    const item = {
-        id: Id,
-    }
-    $.ajax({
-        url: '<?= $path ?>/api/get-timeschedule',
-        type: 'POST',
-        dataType: "JSON",
-        data: JSON.stringify(item),
-        contentType: "application/json",
-        success: function(response, status) {
-            if (response.error == true) {
-                Swal.fire(
-                    'error!',
-                    `${response.message}`,
-                    'error'
-                );
-                localStorage.removeItem("studentToken");
-                window.location.href = '<?= $basePath ?>/student/login.php';
-            } else {
-                console.log("You are on time");
-            }
-        },
-        error: function(xhr, desc, err) {}
-    });
-}
+async function getStudentName(t) {
+    var id = t.value;
+    let getName = await fetch('<?= $path ?>/api/get-studentnames/' + id);
+    getName = await getName.json();
+    const studentId = document.getElementById("student_id");
+    studentId.innerHTML = "<option value='' selected disabled>--Select--</option>";
+    studentId.innerHTML += getName.data.map((data, index) =>
+        `<option value=${data.id}>${data.name}</option>`
+    )
+};
 </script>
 
 <body class="bg2" data-sidebar="dark">
@@ -105,7 +64,7 @@ async function getTimeSchedule(studentId) {
                         <div class="header">
                             <div class="row mt-3 mr-2 ml-2">
                                 <div class="col-md-6 text-left">
-                                    <h5>Call History</h5>
+                                    <h5>Transaction History</h5>
                                 </div>
                                 <div class="col-md-6 text-right">
                                     <!-- <a href="javascript:void(0);" data-toggle="modal" data-target=".add"
@@ -114,19 +73,47 @@ async function getTimeSchedule(studentId) {
                             </div>
                         </div>
                         <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 form-group">
+                                    <label for="cars">Select Department</label>
+                                    <select id="department_id" name="department_id" class="form-control"
+                                        onchange="getStudentName(this)"></select>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 form-group">
+                                    <label for="cars">Select Student</label>
+                                    <select id="student_id" name="student_id" class="form-control"></select>
+                                    </select>
+                                </div>
+                                <div class="form-group col-md-3">
+                                    <label>Select Date From</label>
+                                    <input type="text" id="start_date" placeholder="yyyy-mm-dd" class="form-control">
+                                </div>
+                                <div class="form-group col-md-3">
+                                    <label>To</label>
+                                    <input type="text" id="end_date" placeholder="yyyy-mm-dd" class="form-control">
+                                </div>
+                                <div class="col-md-2" style="display:flex">
+                                    <div style="align-self: center;">
+                                        <button type="submit" id="submit" name="submit"
+                                            class="btn btn-primary create-btn">Submit</button>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="table-responsive">
-                                <table id="callhistory" class="table table-bordered dt-responsive nowrap"
+                                <table id="datatable_transaction" class="table table-bordered dt-responsive nowrap"
                                     style="border-collapse: collapse; border-spacing: 0; width: 100%;">
                                     <thead>
                                         <tr>
                                             <th>S. No</th>
-                                            <th>Date And Time</th>
+                                            <th>Purchase Date</th>
                                             <th>Student Name</th>
-                                            <th>Parent Name</th>
-                                            <th>Minutes</th>
+                                            <th>Plan Name</th>
+                                            <th>Price (₹)</th>
+                                            <th>Plan Minutes</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="getCallHistory">
+                                    <tbody id="getplans">
                                     </tbody>
                                 </table>
                             </div>
@@ -223,3 +210,76 @@ async function getTimeSchedule(studentId) {
             </div>
         </div>
     </div>
+
+    <link href="https://code.jquery.com/ui/1.10.4/themes/ui-lightness/jquery-ui.css" rel="stylesheet">
+    <script src="https://code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
+    <script src="https://cdn.jsdelivr.net/jquery.validation/1.16.0/jquery.validate.min.js"></script>
+    
+    <script>
+    $('#datatable_transaction').DataTable({
+        dom: 'Bfrtip',
+        buttons: [
+            'copy', 'csv', 'excel', 'pdf', 'print'
+        ],
+        searching: true,
+        paging: true,
+        processing: true,
+        serverSide: true,
+        serverMethod: 'get',
+        ajax: {
+            url: `<?= $path ?>/managestudents/get-transactionbystudentid`,
+            headers: { Authorization: 'Bearer ' + (localStorage.getItem('franchisetoken') || '') },
+            data: function(d) {
+                d.department_id = $('#department_id').val()
+                d.id = $('#student_id').val()
+                d.start_date = $('#start_date').val()
+                d.end_date = $('#end_date').val()
+            },
+            dataType: "JSON",
+        },
+        aaSorting: [],
+        columns: [{
+                data: 'index'
+            },
+            {
+                data: 'purchase_date'
+            },
+            {
+                data: 'name'
+            },
+            {
+                data: 'plan_name'
+            },
+            {
+                data: 'price'
+            },
+            {
+                data: 'minute'
+            }
+        ],
+    });
+
+    var table = $('#datatable_transaction').DataTable();
+
+    $('#submit').on('click', function() {
+        table
+            .draw();
+    });
+
+    $(document).ready(function() {
+        $("#start_date").datepicker({
+            dateFormat: "yy-mm-dd",
+                format: "yyyy-mm-dd",
+                autoclose: true,
+        });
+    });
+
+    $(document).ready(function() {
+        $("#end_date").datepicker({
+            dateFormat: "yy-mm-dd",
+                format: "yyyy-mm-dd",
+                autoclose: true,
+            minDate: 0,
+        });
+    });
+    </script>

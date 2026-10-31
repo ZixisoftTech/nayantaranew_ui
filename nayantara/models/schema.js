@@ -41,4 +41,19 @@ function live(table, alias) {
     return known[table] && known[table].has('isdeleted') ? `${ref(alias, 'isdeleted')} = 0` : '1 = 1';
 }
 
-module.exports = { ready, col, live };
+/** Adds any of the given { column: definition } pairs that the table is missing; onAdded(column) runs after each add. */
+function ensureColumns(table, columns, onAdded) {
+    dataBase.query('SHOW COLUMNS FROM ??', [table], (error, rows) => {
+        if (error) return console.log(`${table} column check failed`, error.message);
+        const existing = new Set(rows.map((r) => r.Field));
+        Object.entries(columns).forEach(([column, definition]) => {
+            if (existing.has(column)) return;
+            dataBase.query(`ALTER TABLE ?? ADD COLUMN ?? ${definition}`, [table, column], (err) => {
+                if (err) console.log(`Unable to add ${table}.${column}`, err.message);
+                else if (onAdded) onAdded(column);
+            });
+        });
+    });
+}
+
+module.exports = { ready, col, live, ensureColumns };

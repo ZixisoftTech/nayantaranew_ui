@@ -1,4 +1,9 @@
 const dataBase = require('../../config/db');
+const { liveName, personName } = require('../lists');
+
+// tickets keep a copy of the student's name; show the current one (the copy only if the student was deleted)
+const STUDENT_ISSUE_NAME = liveName('tbl_student.name', 'tbl_student_issue.student_name');
+const { callCharge } = require('../call_rules');
 const multer = require('multer');
 
 const fileStorage = multer.diskStorage({
@@ -97,7 +102,9 @@ const updateAvailablemin = (req, res, next) => {
                     return res.status(200).send({ error: true, message: "Please insert the all field" });
                 }
                 else {
-                    dataBase.query('SELECT * From tbl_callhistory WHERE meeting_link = ?', [meetinglink], function (error, status, fields) {
+                    dataBase.query('SELECT * From tbl_callhistory WHERE meeting_link = ?', [meetinglink], async function (error, status, fields) {
+                            // charge = duration x the school's coins/min rate for this call type (1 coin = 1 minute of balance)
+                            const charge = status != 0 ? await callCharge(status[0], availablemin) : 0;
                         if (status[0].status == 3) {
                             dataBase.query('SELECT * From tbl_parents WHERE student_id = ?', [id], function (error, parentfound, fields) {
                                 if (parentfound == 0) {
@@ -105,14 +112,14 @@ const updateAvailablemin = (req, res, next) => {
                                 }
                                 else {
                                     // never take a positive balance below 0; an already-negative balance is left as is
-                                    dataBase.query('UPDATE tbl_parents SET total_talktime = IF(total_talktime > 0, GREATEST(total_talktime - ?, 0), total_talktime) WHERE student_id = ?', [Number(availablemin) || 0, id], function (error, updatemin, fields) {
+                                    dataBase.query('UPDATE tbl_parents SET total_talktime = IF(total_talktime > 0, GREATEST(total_talktime - ?, 0), total_talktime) WHERE student_id = ?', [charge, id], function (error, updatemin, fields) {
                                         if (updatemin) {
                                             dataBase.query('SELECT * FROM tbl_student WHERE id = "' + parentfound[0].student_id + '"', function (error, studentfound, results) {
                                                 if (studentfound == 0) {
                                                     return res.status(402).send({ error: true, message: "Student not found", data: null });
                                                 }
                                                 else {
-                                                    dataBase.query('UPDATE tbl_student SET total_talktime = IF(total_talktime > 0, GREATEST(total_talktime - ?, 0), total_talktime) WHERE id = ?', [Number(availablemin) || 0, studentfound[0].id], function (error, Updatemin, fields) {
+                                                    dataBase.query('UPDATE tbl_student SET total_talktime = IF(total_talktime > 0, GREATEST(total_talktime - ?, 0), total_talktime) WHERE id = ?', [charge, studentfound[0].id], function (error, Updatemin, fields) {
                                                         if (Updatemin) {
                                                             return res.status(200).send({ error: false, message: "Time Successfully update" });
                                                         }
@@ -573,7 +580,9 @@ const studentCallEnd = (req, res, next) => {
                     return res.status(200).send({ error: true, message: "All Field Required" });
                 }
                 else {
-                    dataBase.query('SELECT * From tbl_callhistory WHERE meeting_link = ?', [meetinglink], function (error, callhistory, fileds) {
+                    dataBase.query('SELECT * From tbl_callhistory WHERE meeting_link = ?', [meetinglink], async function (error, callhistory, fileds) {
+                            // charge = duration x the school's coins/min rate for this call type (1 coin = 1 minute of balance)
+                            const charge = callhistory != 0 ? await callCharge(callhistory[0], availablemin) : 0;
                         if (callhistory == 0) {
                             return res.status(200).send({ error: true, message: "Meetinglink not found", data: null });
                         }
@@ -593,14 +602,14 @@ const studentCallEnd = (req, res, next) => {
                                                 }
                                                 else {
                                                     // never take a positive balance below 0; an already-negative balance is left as is
-                                                    dataBase.query('UPDATE tbl_parents SET total_talktime = IF(total_talktime > 0, GREATEST(total_talktime - ?, 0), total_talktime) WHERE student_id = ?', [Number(availablemin) || 0, callhistory[0].student_id], function (error, updatemin, fields) {
+                                                    dataBase.query('UPDATE tbl_parents SET total_talktime = IF(total_talktime > 0, GREATEST(total_talktime - ?, 0), total_talktime) WHERE student_id = ?', [charge, callhistory[0].student_id], function (error, updatemin, fields) {
                                                         if (updatemin) {
                                                             dataBase.query('SELECT * FROM tbl_student WHERE id = "' + parentfound[0].student_id + '"', function (error, studentfound, results) {
                                                                 if (studentfound == 0) {
                                                                     return res.status(402).send({ error: true, message: "Student not found", data: null });
                                                                 }
                                                                 else {
-                                                                    dataBase.query('UPDATE tbl_student SET total_talktime = IF(total_talktime > 0, GREATEST(total_talktime - ?, 0), total_talktime) WHERE id = ?', [Number(availablemin) || 0, studentfound[0].id], function (error, Updatemin, fields) {
+                                                                    dataBase.query('UPDATE tbl_student SET total_talktime = IF(total_talktime > 0, GREATEST(total_talktime - ?, 0), total_talktime) WHERE id = ?', [charge, studentfound[0].id], function (error, Updatemin, fields) {
                                                                         if (Updatemin) {
                                                                             return res.status(200).send({ error: false, message: "Time Successfully update" });
                                                                         }
@@ -896,9 +905,9 @@ const getStudentIssue = (request, response, next) => {
 
     var draw = request.query.draw;
 
-    var start = request.query.start;
+    var start = Math.max(0, Number(request.query.start) || 0);
 
-    var length = request.query.length;
+    var length = Math.max(1, Number(request.query.length) || 10);
 
     var order_data = request.query.order;
 
@@ -909,19 +918,23 @@ const getStudentIssue = (request, response, next) => {
     else {
         var column_index = request.query.order[0]['column'];
 
-        var column_name = request.query.columns[column_index]['data'];
+        // sort by whitelisted SQL columns; the DataTables keys (index, roll_no, ...) aren't all real columns
+        var sort_columns = { index: 'tbl_student_issue.id', student_name: STUDENT_ISSUE_NAME, roll_no: 'tbl_student.student_roll_no', subject: 'tbl_student_issue.subject', message: 'tbl_student_issue.message', created_at: 'tbl_student_issue.created_at' };
 
-        var column_sort_order = request.query.order[0]['dir'];
+        var column_name = sort_columns[request.query.columns[column_index]['data']] || 'tbl_student_issue.id';
+
+        var column_sort_order = request.query.order[0]['dir'] == 'asc' ? 'asc' : 'desc';
     }
 
     //search data
 
-    var search_value = request.query.search['value'];
+    var search_value = dataBase.escape('%' + ((request.query.search && request.query.search['value']) || '') + '%');
 
     var search_query = `
-     AND (student_name LIKE '%${search_value}%' 
-     OR subject LIKE '%${search_value}%' 
-     OR message LIKE '%${search_value}%'
+     AND (${STUDENT_ISSUE_NAME} LIKE ${search_value}
+     OR tbl_student.student_roll_no LIKE ${search_value}
+     OR tbl_student_issue.subject LIKE ${search_value}
+     OR tbl_student_issue.message LIKE ${search_value}
      )
      `;
 
@@ -933,11 +946,11 @@ const getStudentIssue = (request, response, next) => {
 
         //Total number of records with filtering
 
-        dataBase.query(`SELECT COUNT(*) AS Total FROM tbl_student_issue WHERE 1 ${search_query}`, function (error, data) {
+        dataBase.query(`SELECT COUNT(*) AS Total FROM tbl_student_issue LEFT JOIN tbl_student ON tbl_student_issue.student_id = tbl_student.id WHERE 1 ${search_query}`, function (error, data) {
             var total_records_with_filter = data[0].Total;
 
             var query = `
-            SELECT tbl_student_issue.*, tbl_student.student_roll_no FROM tbl_student_issue LEFT JOIN tbl_student ON tbl_student_issue.student_id = tbl_student.id
+            SELECT tbl_student_issue.*, ${STUDENT_ISSUE_NAME} AS name, tbl_student.student_roll_no FROM tbl_student_issue LEFT JOIN tbl_student ON tbl_student_issue.student_id = tbl_student.id
             WHERE 1 ${search_query} 
             ORDER BY ${column_name} ${column_sort_order} 
             LIMIT ${start}, ${length}
@@ -946,11 +959,11 @@ const getStudentIssue = (request, response, next) => {
             var data_arr = [];
 
             dataBase.query(query, function (error, data) {
-                data.forEach(function (row, index) {
+                (data || []).forEach(function (row, index) {
                     data_arr.push({
                         '_ref': { student: row.student_id },
                         'index': ++start,
-                        'student_name': row.student_name,
+                        'student_name': personName(row.name, row.student_roll_no),
                         'roll_no': row.student_roll_no,
                         'subject': row.subject,
                         'message': row.message,
@@ -1048,106 +1061,6 @@ const updateStudentStatus = (req, res, next) => {
     }
 }
 
-// const getStudentSummary = (req, res, next) => {
-//     try {
-//         dataBase.query('SELECT tbl_student.*,CONCAT(FLOOR(tbl_student.total_talktime / 60)) AS `talk_time_min`, tbl_franchise.franchiseName as franchise_name,tbl_department.name as department_name, (SELECT CONCAT(FLOOR((SUM(`minute`))/60)) as m FROM `tbl_callhistory` WHERE `student_id`=tbl_student.id) as used_min from tbl_student left join tbl_franchise ON tbl_franchise.Id = tbl_student.franchise_id left join tbl_department ON tbl_department.id = tbl_student.department_id', function (error, getStudent, fields) {
-//             if (getStudent == 0) {
-//                 return res.status(200).send({ error: true, message: "Students not found", data: null });
-//             } else {
-//                 return res.status(200).send({ error: true, message: "Students found", data: getStudent });
-
-//             }
-//         })
-//     } catch (error) {
-//         return res.status(200).send({ error: true, message: "get student summary api not working", data: null });
-//     }
-// }
-
-const getStudentSummary = (request, response, next) => {
-
-    var draw = request.query.draw;
-
-    var start = request.query.start;
-
-    var length = request.query.length;
-
-    var order_data = request.query.order;
-
-    if (typeof order_data == 'undefined') {
-        var column_name = 'tbl_student.id';
-        var column_sort_order = 'desc';
-    }
-    else {
-        var column_index = request.query.order[0]['column'];
-
-        var column_name = request.query.columns[column_index]['data'];
-
-        var column_sort_order = request.query.order[0]['dir'];
-    }
-
-    //search data
-
-    var search_value = request.query.search['value'];
-
-    var search_query = `
-     (tbl_student.name LIKE '%${search_value}%' 
-     OR student_roll_no LIKE '%${search_value}%'
-     )
-     `;
-
-    //Total number of records without filtering
-
-    dataBase.query("SELECT COUNT(*) AS Total FROM tbl_student", function (error, data) {
-
-        var total_records = data[0].Total;
-
-
-        //Total number of records with filtering
-
-        dataBase.query(`SELECT COUNT(*) AS Total FROM tbl_student WHERE ${search_query}`, function (error, data) {
-            var total_records_with_filter = data[0].Total;
-
-            var query = `
-            SELECT tbl_student.*,CONCAT(FLOOR(tbl_student.total_talktime / 60)) AS talk_time_min, tbl_franchise.franchiseName as franchise_name,tbl_department.name as department_name, (SELECT CONCAT(FLOOR((SUM(minute))/60)) as m FROM tbl_callhistory WHERE student_id=tbl_student.id) as used_min from tbl_student left join tbl_franchise ON tbl_franchise.Id = tbl_student.franchise_id left join tbl_department ON tbl_department.id = tbl_student.department_id
-            WHERE ${search_query} 
-            ORDER BY ${column_name} ${column_sort_order} 
-            LIMIT ${start}, ${length}
-            `;
-
-            var data_arr = [];
-
-            dataBase.query(query, function (error, data) {
-                data.forEach(function (row, index) {
-                    data_arr.push({
-                        '_ref': { name: 'student', student: row.id, franchise: row.franchise_id, department: row.department_id },
-                        'index': ++start,
-                        'name': row.name,
-                        'student_roll_no': row.student_roll_no,
-                        'franchise_name': row.franchise_name,
-                        'department_name': row.department_name,
-                        'talk_time_min': row.talk_time_min,
-                        'used_min': row.used_min,
-                    });
-                });
-
-                var output = {
-                    'draw': draw,
-                    'iTotalRecords': total_records,
-                    'iTotalDisplayRecords': total_records_with_filter,
-                    'aaData': data_arr
-                };
-
-                // return response.status(200).send({error: false, message:"Data Successsfully Found", data: output})
-                response.json(output);
-
-            });
-
-        });
-
-    });
-
-};
-
 const getStudentFranchiseId = (req, res, next) => {
     try {
             const id = req.params.id;
@@ -1170,4 +1083,4 @@ const getStudentFranchiseId = (req, res, next) => {
     }
 }
 
-module.exports = { getTarnsition, getWebScheduleById, getAvailablemin, getWebAvailbalemin, updateAvailablemin, getSchedule, gettimeSchedule, parentWebLoginStatus, parentLoginStatus, studentLoginStatus, getParentById, callhistory, studentCall, updateCallStatus, studentCallEnd, getTransWebById, getwebCallHistory, studentIssue, getStudentIssue, getStatusByStudentId, updateStudentStatus, getStudentSummary, getStudentFranchiseId };
+module.exports = { getTarnsition, getWebScheduleById, getAvailablemin, getWebAvailbalemin, updateAvailablemin, getSchedule, gettimeSchedule, parentWebLoginStatus, parentLoginStatus, studentLoginStatus, getParentById, callhistory, studentCall, updateCallStatus, studentCallEnd, getTransWebById, getwebCallHistory, studentIssue, getStudentIssue, getStatusByStudentId, updateStudentStatus, getStudentFranchiseId };

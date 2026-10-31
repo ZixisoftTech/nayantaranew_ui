@@ -2706,3 +2706,46 @@ html.nt .nt-ov-status.is-none { background: var(--nt-warning-soft); color: var(-
   html.nt .nt-ov-head { flex-wrap: wrap; }
 }
 @media (prefers-reduced-motion: reduce) { html.nt .nt-ov-skeleton { animation: none; } }
+
+
+/* ---------------------------------------------------------- single portal */
+
+/* view-only access (sub admin with "view" on this page): hide actions that change data */
+.nt-readonly .create-btn,
+.nt-readonly [data-target=".add"],
+.nt-readonly [data-target=".edit"],
+.nt-readonly .delete,
+.nt-readonly .nt-menu-item[onclick*="delete" i],
+.nt-readonly .nt-menu-item[onclick*="update" i],
+.nt-readonly .modal-footer [type="submit"],
+.nt-readonly .nt-allot-now {
+    display: none !important;
+}
+.nt-readonly td button[onclick*="status" i] {
+    pointer-events: none;
+    cursor: default;
+}
+
+/* school picker shown to admins on the school tools pages */
+.nt-school-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding: 10px 14px;
+    border: 1px solid var(--nt-border, #e5e7eb);
+    border-radius: 10px;
+    background: var(--nt-surface, #fff);
+    font-weight: 600;
+}
+.nt-school-bar select {
+    max-width: 320px;
+}
+
+.nt-perm-section td {
+    background: var(--nt-surface-2, #f9fafb);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}

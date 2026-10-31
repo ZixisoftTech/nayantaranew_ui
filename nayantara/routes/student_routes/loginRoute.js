@@ -2,11 +2,10 @@ const express = require('express');
 const router = express.Router();
 
 const { Login, login, studentName, Logout, studentProfile, studentProfileUpdate } = require('../../models/student/login');
-const { getAvailablemin, getWebAvailbalemin, updateAvailablemin, getWebScheduleById, parentWebLoginStatus, getSchedule, gettimeSchedule, parentLoginStatus, studentLoginStatus, getTransWebById, getParentById, getTarnsition, callhistory, studentCall, updateCallStatus, studentCallEnd, getwebCallHistory, studentIssue, getStudentIssue, getStatusByStudentId, updateStudentStatus, getStudentSummary, getStudentFranchiseId } = require('../../models/student/studentplan');
+const { getAvailablemin, getWebAvailbalemin, updateAvailablemin, getWebScheduleById, parentWebLoginStatus, getSchedule, gettimeSchedule, parentLoginStatus, studentLoginStatus, getTransWebById, getParentById, getTarnsition, callhistory, studentCall, updateCallStatus, studentCallEnd, getwebCallHistory, studentIssue, getStudentIssue, getStatusByStudentId, updateStudentStatus, getStudentFranchiseId } = require('../../models/student/studentplan');
 const { fcmToken, jitsyLink, callMinute, fcmWebNotification } = require('../../models/student/student_fcmtoken');
 
 
-router.get('/get-summarystudnet', getStudentSummary);
 router.get('/get-studentissue', getStudentIssue);
 router.post('/update-studentstatus', updateStudentStatus);
 router.post('/get-statusbystudentid', getStatusByStudentId);

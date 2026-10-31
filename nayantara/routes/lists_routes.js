@@ -14,6 +14,5 @@ router.get('/managestudents/get-transactionbystudentid', lists.franchiseTransact
 
 router.get('/api/get-department', lists.adminDepartments);
 router.get('/subscription/get-subscription', lists.adminSubscriptions);
-router.get('/api/get-summarystudnet', lists.studentSummary);
 
 module.exports = router;

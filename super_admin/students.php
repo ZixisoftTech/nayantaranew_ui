@@ -27,13 +27,25 @@ async function getDepartment(t) {
 async function getFranchise() {
     let getName = await fetch('<?= $path ?>/api/get-franchiseid');
     getName = await getName.json();
-    const departmentId = document.getElementById("franchise_id");
-    departmentId.innerHTML = "<option value='' selected disabled>--Select--</option>";
-    departmentId.innerHTML += getName.data.map((data, index) =>
+    const options = "<option value='' selected disabled>--Select--</option>" + getName.data.map((data, index) =>
         `<option value=${data.Id}>${data.franchiseName}</option>`
-    )
+    ).join('');
+    // the filter above the table and the school picker in the add form
+    document.getElementById("franchise_id").innerHTML = options;
+    document.getElementById("add_franchise_id").innerHTML = options;
 };
-getFranchise()
+// this script runs before the page body (and the add form) exists, so wait for it
+document.addEventListener('DOMContentLoaded', getFranchise);
+
+// Add form: list the chosen school's houses.
+async function getAddDepartment(t) {
+    let getName = await fetch('<?= $path ?>/api/get-department/' + t.value);
+    getName = await getName.json();
+    const houses = getName.data || [];
+    document.getElementById("add_department_id").innerHTML =
+        `<option value='' selected disabled>${houses.length ? '--Select--' : 'No houses in this school'}</option>` +
+        houses.map((data) => `<option value=${data.id}>${data.name}</option>`).join('');
+}
 
 async function getMin(id) {
     let getMin = await fetch('<?= $path ?>/managestudents/student-get/' + id);
@@ -64,16 +76,15 @@ async function updateMin() {
                     `${item.message}`,
                     'error'
                 )
-                window.stop();
             } else {
                 Swal.fire(
                     'success!',
                     `${item.message}`,
                     'success'
                 )
-                setTimeout(() => {
-                    document.location.reload();
-                }, 2000);
+                // refresh the rows in place; reloading the page would also lose the school / house filter
+                $('.modal.edit').modal('hide');
+                $('#datatable_minupdate').DataTable().draw(false);
             }
         }).catch((error) => {
             console.log("Error =>", error);
@@ -92,9 +103,11 @@ async function updateMin() {
                                 <div class="col-md-6 text-left">
                                     <h5>Students</h5>
                                 </div>
-                                <!-- <div class="col-md-6 text-right">
+                                <div class="col-md-6 text-right">
+                                    <a href="javascript:void(0);" data-toggle="modal" data-target=".import" onclick="openStudentImport()"
+                                        class="btn btn-primary create-btn"><i class="bx bx-upload"></i> Bulk import</a>
                                     <a href="javascript:void(0);" data-toggle="modal" data-target=".add" class="btn btn-primary create-btn">Create</a>
-                                </div> -->
+                                </div>
                             </div>
                         </div>
                         <div class="card-body">
@@ -125,9 +138,9 @@ async function updateMin() {
                                             <th>Student Roll No</th>
                                             <th>Contact Number</th>
                                             <th>Email</th>
-                                            <th>Avaibale Minutes</th>
-                                            <th>Franchise</th>
-                                            <th>Department</th>
+                                            <th>Available Minutes</th>
+                                            <th>School</th>
+                                            <th>House</th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>
@@ -147,6 +160,59 @@ async function updateMin() {
     <?php include("../include/foot.php") ?>
     <?php include("../include/footer.php") ?>
 
+    <div class="modal fade import" tabindex="-1" role="dialog" aria-labelledby="importTitle" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title mt-0" id="importTitle">Bulk import students</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form action="<?= $path ?>/import-csv" enctype="multipart/form-data" method="post" id="studentImportForm">
+                    <div class="modal-body">
+                        <input type="hidden" name="return_to" value="super_admin/students.php">
+                        <p class="text-muted small">Each row's <strong>department_id</strong> is the house ID (the ID column on the Houses page). The school is picked automatically from the house.</p>
+                        <div class="form-group">
+                            <label class="d-flex justify-content-between">CSV file<span>
+                                <a href="<?= $basePath ?>/assets/student.csv" download="students.csv" target="_blank"><i class="bx bx-download"></i> Sample CSV</a></span></label>
+                            <input type="file" name="import-csv" accept=".csv" required class="form-control" aria-label="Students CSV file">
+                            <small class="text-muted">Students already in the school (same roll no) go to Student Skip Data. Rows with a house ID that doesn't exist are not imported.</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary create-btn">Import students</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function openStudentImport() {
+        document.getElementById('studentImportForm').reset();
+    }
+
+    (function () {
+        const params = new URLSearchParams(location.search);
+        const status = params.get('import');
+        if (!status) return;
+        history.replaceState(null, '', location.pathname);
+        $(function () {
+            const n = (k) => Number(params.get(k)) || 0;
+            if (status === 'done') {
+                const lines = [`${n('added')} student${n('added') === 1 ? '' : 's'} added`];
+                if (n('skipped')) lines.push(`${n('skipped')} already existed or had a house from another school (see Student Skip Data)`);
+                if (n('unknown')) lines.push(`${n('unknown')} had a house ID that doesn't exist and were not imported`);
+                if (n('failed')) lines.push(`${n('failed')} could not be saved`);
+                Swal.fire('Import finished', lines.join('<br>'), n('unknown') || n('failed') ? 'warning' : 'success');
+            } else {
+                Swal.fire('error!', status === 'missing' ? 'Please choose a CSV file.' : 'The import failed. Please check the file and try again.', 'error');
+            }
+        });
+    })();
+    </script>
+
     <div class="modal fade add" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -156,41 +222,57 @@ async function updateMin() {
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <form action="" method="POST" onsubmit="return addStudents()" id="createform">
+                <form action="<?= $path ?>/managestudents/add-students" method="POST" id="createform">
                     <div class="modal-body">
                         <div class="row">
-                            <input type="hidden" name="franchise_id_form" id="franchise_id_form" value="">
+                            <div class="form-group col-md-6">
+                                <label>Select School</label>
+                                <select id="add_franchise_id" name="add_franchise_id" class="form-control"
+                                    onchange="getAddDepartment(this)"></select>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Select House</label>
+                                <select id="add_department_id" name="add_department_id" class="form-control">
+                                    <option value="" selected disabled>Select a school first</option>
+                                </select>
+                            </div>
                             <div class="col-md-12 mb-3">
                                 <mark>Students Details</mark>
                             </div>
-                            <div class="form-group col-md-3">
-                                <label>Student Name</label>
-                                <input type="text" id="student_name" name="student_name" class="form-control">
+                            <div class="form-group col-md-6">
+                                <label>Full Name</label>
+                                <input type="text" id="student_name" name="student_name" class="form-control" placeholder="e.g. John Doe">
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Roll Number</label>
+                                <input type="text" id="student_roll_no" name="student_roll_no" class="form-control" placeholder="e.g. 101">
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Initial Tokens</label>
+                                <input type="number" id="student_coins" name="student_coins" class="form-control" min="0" step="1" value="0">
+                                <small class="text-muted">Spacs Coins, 1 coin = 1 minute. Shared with the student's parents.</small>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Login Password</label>
+                                <input type="password" id="password" name="password" class="form-control" autocomplete="new-password">
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Account Status</label>
+                                <select id="student_login_status" name="student_login_status" class="form-control">
+                                    <option value="1" selected>Active</option>
+                                    <option value="0">Inactive (can't sign in)</option>
+                                </select>
                             </div>
                             <div class="form-group col-md-3">
-                                <label>Student Roll No.</label>
-                                <input type="number" id="student_roll_no" min="1" name="student_roll_no"
-                                    class="form-control">
-                            </div>
-                            <div class="form-group col-md-3">
-                                <label>Contact number</label>
+                                <label>Contact number (Optional)</label>
                                 <input type="number" id="contact_number" name="contact_number" class="form-control">
                             </div>
                             <div class="form-group col-md-3">
-                                <label> Email</label>
+                                <label>Email (Optional)</label>
                                 <input type="email" id="email" name="email" class="form-control">
-                            </div>
-                            <div class="form-group col-md-3">
-                                <label>Password</label>
-                                <input type="password" id="password" name="password" class="form-control">
-                            </div>
-                            <div class="form-group col-md-3">
-                                <label>Confirm Password</label>
-                                <input type="password" id="confirmpassword" name="confirmpassword" class="form-control">
                             </div>
                             <div class="col-md-12 mb-3 d-flex">
                                 <mark>Parents Details 1</mark>
-                                <div class="text-warning">*</div>
                             </div>
                             <div class="form-group col-md-3">
                                 <label>Parent Name</label>
@@ -266,7 +348,7 @@ async function updateMin() {
                             </div>
                             <div class="form-group col-md-3">
                                 <label>Password</label>
-                                <input type="text" id="password4" name="password4" class="form-control">
+                                <input type="password" id="password4" name="password4" class="form-control">
                             </div>
                         </div>
                     </div>
@@ -286,7 +368,7 @@ async function updateMin() {
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <form action="" method="POST" onsubmit="return updateMin()" id="updateform">
+                <form action="" method="POST" onsubmit="updateMin(); return false;" id="updateform">
                     <div class="modal-body">
                         <div class="row">
                             <input type="hidden" name="editid" id="editid">
@@ -362,5 +444,80 @@ async function updateMin() {
     $('#submit').on('click', function() {
         table
             .draw();
+    });
+
+    // Add student: same rules and payload as the school portal (school_students.php).
+    jQuery("#createform").validate({
+        rules: {
+            add_franchise_id: 'required',
+            add_department_id: 'required',
+            student_name: 'required',
+            student_roll_no: 'required',
+            password: { required: true, minlength: 4, maxlength: 12 },
+            student_coins: { number: true, min: 0 },
+            student_login_status: 'required',
+        },
+        messages: {
+            add_franchise_id: { required: "Please select school" },
+            add_department_id: { required: "Please select house" },
+            student_name: { required: "Please enter student name" },
+            student_roll_no: { required: "Please enter student roll number" },
+            password: { required: "Please enter student password" },
+            student_coins: { min: "Can't be negative" },
+        },
+        submitHandler: function(form) {
+            const val = (id) => document.getElementById(id).value.trim();
+            // parents are optional, but a filled-in parent needs a name and a 10 digit contact
+            for (const n of [1, 2, 3, 4]) {
+                const filled = ["parent_name", "contact_number", "email", "password"].some((f) => val(f + n));
+                if (filled && (!val("parent_name" + n) || !/^\d{10}$/.test(val("contact_number" + n)))) {
+                    Swal.fire('error!', `Parent ${n}: enter a name and a 10 digit contact number, or leave all of it empty.`, 'error');
+                    return false;
+                }
+            }
+            const item = {
+                franchise_id: val("add_franchise_id"),
+                department_id: val("add_department_id"),
+                name: val("student_name"),
+                student_roll_no: val("student_roll_no"),
+                email: val("email"),
+                contact: val("contact_number"),
+                password: val("password"),
+                // the form has a single password field; the API still expects the confirmation
+                confirmpassword: val("password"),
+                coins: val("student_coins"),
+                login_status: val("student_login_status"),
+                parent: [1, 2, 3, 4].map((n) => ({
+                    name: val("parent_name" + n),
+                    contact: val("contact_number" + n),
+                    email: val("email" + n),
+                    password: val("password" + n),
+                })),
+            };
+            $.ajax({
+                url: $(form).attr("action"),
+                type: "POST",
+                dataType: "JSON",
+                data: JSON.stringify(item),
+                contentType: "application/json",
+                success: function(response) {
+                    if (response.error == true) {
+                        Swal.fire('error!', `${response.message}`, 'error');
+                    } else {
+                        Swal.fire('success!', `${response.message}`, 'success');
+                        $('.modal.add').modal('hide');
+                        form.reset();
+                        // the school is cleared, so drop the previous school's houses too
+                        document.getElementById("add_department_id").innerHTML =
+                            "<option value='' selected disabled>Select a school first</option>";
+                        table.draw();
+                    }
+                },
+                error: function() {
+                    Swal.fire('error!', 'Could not add the student. Please try again.', 'error');
+                }
+            });
+            return false;
+        }
     });
     </script>
