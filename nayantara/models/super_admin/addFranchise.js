@@ -161,7 +161,7 @@ const getPalnPermission = (req, res, next) => {
 const addFranchise = (req, res, next) => {
     try {
         const { franchiseName, franchiserName, email, password, address, state, city, pincode, room_id, hash, by_plan_permision, remark } = req.body;
-        if (franchiseName == 0 || franchiserName == 0 || email == 0 || password == 0 || address == 0 || state == 0 || city == 0 || pincode == 0 || room_id == 0 || by_plan_permision === '') {
+        if (franchiseName == 0 || franchiserName == 0 || email == 0 || password == 0 || address == 0 || state == 0 || pincode == 0 || room_id == 0 || by_plan_permision === '') {
             return res.status(401).send({ error: true, message: "Please insert all field" });
         }
         const settings = readSettings(req.body);
@@ -171,7 +171,8 @@ const addFranchise = (req, res, next) => {
         else {
             loginEmailTaken(email, 0, (taken) => {
                 if (!taken) {
-                    const row = { franchiseName, franchiserName, email, password, address, state, city, pincode, room_id, hash, by_plan_permision, remark, ...settings.values };
+                    // city is optional
+                    const row = { franchiseName, franchiserName, email, password, address, state, city: city || '', pincode, room_id, hash, by_plan_permision, remark, ...settings.values };
                     dataBase.query('INSERT INTO tbl_franchise SET ?', [row], (error, addFranchise, fields) => {
                         if (addFranchise == 0) {
                             return res.status(200).send({ error: true, message: "Franchise not successfully add", data: null });
@@ -306,7 +307,7 @@ const getFranchise = (request, response, next) => {
                         'password': row.password,
                         'address': row.address,
                         'state_name': row.state_name,
-                        'cities_name': row.cities_name,
+                        'cities_name': row.cities_name || '',
                         'pincode': row.pincode,
                         'room_id': row.room_id,
                         'hash': row.hash,

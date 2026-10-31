@@ -425,11 +425,12 @@ async function getCityName(t) {
     let getState = await fetch('<?= $path ?>/api/get-cityByStateId/' + id);
     getState = await getState.json();
     var state = document.getElementById("city")
-    state.innerHTML = "<option value='' selected disabled>---select---</option>"
+    state.innerHTML = "<option value='' selected>---select---</option>"
     document.getElementById("pincode").value = "";
+    if (!Array.isArray(getState)) return; // state without cities: city stays empty
     state.innerHTML += getState.map((data, index) =>
         `<option value="${data.id}">${data.name}</option>`
-    )
+    ).join('')
 }
 
 async function updateCityName(t, cityid) {
@@ -437,7 +438,8 @@ async function updateCityName(t, cityid) {
     let getState = await fetch('<?= $path ?>/api/get-cityByStateId/' + id);
     getState = await getState.json();
     var city = document.getElementById("editcity")
-    city.innerHTML = "<option value='' selected disabled>---select---</option>"
+    city.innerHTML = "<option value='' selected>---select---</option>"
+    if (!Array.isArray(getState)) return; // state without cities: city stays empty
     getState.forEach((data, index) => {
         var selected = "";
         if (cityid != 0) {
@@ -455,11 +457,12 @@ async function updateCity(t) {
     let getState = await fetch('<?= $path ?>/api/get-cityByStateId/' + id);
     getState = await getState.json();
     var city = document.getElementById("editcity")
-    city.innerHTML = "<option value='' selected disabled>---select---</option>"
+    city.innerHTML = "<option value='' selected>---select---</option>"
     document.getElementById("editpincode").value = "";
+    if (!Array.isArray(getState)) return; // state without cities: city stays empty
     city.innerHTML += getState.map((data, index) =>
         `<option value="${data.id}">${data.name}</option>`
-    )
+    ).join('')
 }
 </script>
 
@@ -575,7 +578,7 @@ async function updateCity(t) {
                                 </select>
                             </div>
                             <div class="form-group col-md-6">
-                                <label>City<span class="req" style="color:red">*</span></label>
+                                <label>City</label>
                                 <select name="city" id="city" class="form-control">
                                 </select>
                             </div>
@@ -666,7 +669,7 @@ async function updateCity(t) {
                                     onchange="updateCity(this)"></select>
                             </div>
                             <div class="form-group col-md-6">
-                                <label>City<span class="req" style="color:red">*</span></label>
+                                <label>City</label>
                                 <select name="editcity" id="editcity" class="form-control"></select>
                             </div>
                             <div class="form-group col-md-6">
@@ -715,7 +718,6 @@ async function updateCity(t) {
                 },
                 address: 'required',
                 state: 'required',
-                city: 'required',
                 pincode: {
                     required: true,
                     minlength: 6,
@@ -745,9 +747,6 @@ async function updateCity(t) {
                 state: {
                     required: "Please enter state",
                 },
-                city: {
-                    required: "Please enter city",
-                },
                 pincode: {
                     required: "Please enter pincode",
                     minlength: "Please field accept min 6 digits",
@@ -776,7 +775,6 @@ async function updateCity(t) {
                 },
                 editaddress: 'required',
                 editstate: 'required',
-                editcity: 'required',
                 editpincode: {
                     required: true,
                     minlength: 6,
@@ -805,9 +803,6 @@ async function updateCity(t) {
                 },
                 editstate: {
                     required: "Please select state",
-                },
-                editcity: {
-                    required: "Please enter city",
                 },
                 editpincode: {
                     required: "Please enter pincode",

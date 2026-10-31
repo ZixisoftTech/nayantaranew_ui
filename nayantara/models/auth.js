@@ -68,6 +68,14 @@ function claimsOf(req) {
 
 const isAdminRole = (role) => role === 'admin' || role === 'subadmin';
 
+/** Claims of a super admin, or of a sub admin with "manage" on the given portal page; otherwise throws 401/403. */
+function requireManage(req, page) {
+    const claims = claimsOf(req);
+    if (claims.role === 'admin') return claims;
+    if (claims.role === 'subadmin' && (claims.permissions || {})[page] === 'manage') return claims;
+    throw new HttpError(403, 'You do not have permission to do this.');
+}
+
 const parsePermissions = (text) => {
     try {
         const value = JSON.parse(text || '{}');
@@ -213,4 +221,4 @@ const deleteSubAdmin = handle(async (req) => {
     return { message: 'Sub admin deleted' };
 });
 
-module.exports = { portalLogin, me, schoolToken, listSubAdmins, createSubAdmin, updateSubAdmin, deleteSubAdmin, isAdminRole, claimsOf, HttpError, handle, q };
+module.exports = { portalLogin, me, schoolToken, listSubAdmins, createSubAdmin, updateSubAdmin, deleteSubAdmin, isAdminRole, claimsOf, requireManage, HttpError, handle, q };

@@ -420,7 +420,8 @@ flowchart TD
 ### Rules
 
 - If the API was down at the allotment time, the credit happens when it comes back the same day.
-- Code: `runAllotments` in `nayantara/models/call_rules.js`, started from `nayantara/app.js`.
+- **Allot now:** the edit house form has an "Allot now" button that credits the house's saved weekly minutes immediately (super admin, or sub admin with manage access to Houses). It is an extra credit: the weekly schedule still runs. Logged with `source = 'manual'` (the weekly job logs `auto`).
+- Code: `runAllotments` and `allotNow` (`POST /api/allot-now/:id`) in `nayantara/models/call_rules.js`, the job started from `nayantara/app.js`.
 
 ---
 

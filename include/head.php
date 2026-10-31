@@ -36,7 +36,7 @@ require_once __DIR__ . '/config.php'; $basePath = nt_base('https://nayantarabysp
     <link href="<?= $basePath ?>/assets/admin/css/app.min.css" id="app-style" rel="stylesheet" type="text/css" />
     <link href="<?= $basePath ?>/assets/admin/css/style.css" id="app-style" rel="stylesheet" type="text/css" />
     <link href="<?= $basePath ?>/assets/admin/libs/sweetalert2/sweetalert2.min.css" rel="stylesheet" type="text/css" />
-    <link href="<?= $basePath ?>/assets/admin/css/theme.css?v=35" rel="stylesheet" type="text/css" />
+    <link href="<?= $basePath ?>/assets/admin/css/theme.css?v=36" rel="stylesheet" type="text/css" />
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <!-- jQuery is needed here because page scripts run before foot.php. Bootstrap 4 + DataTables load in foot.php;
          a second Bootstrap (5.x) here took over $.fn.modal, so popups opened from code could not be closed. -->

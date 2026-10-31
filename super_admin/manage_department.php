@@ -46,6 +46,12 @@ function houseSettingsFields($p)
     <div class="col-12 mb-3">
         <small class="text-muted" id="<?= $p ?>allotmentHint"></small>
     </div>
+    <?php if ($p === 'update'): ?>
+    <div class="col-12 mb-3 d-flex align-items-center flex-wrap">
+        <button type="button" class="btn btn-outline-primary btn-sm mr-2 nt-allot-now" id="allotNowBtn" onclick="allotNow()">🔄 Allot now</button>
+        <small class="text-muted">Credits this house's saved weekly minutes to all its students immediately. The weekly schedule still runs as usual.</small>
+    </div>
+    <?php endif; ?>
     <div class="form-group col-md-6">
         <label class="d-flex justify-content-between">Parent Side Notice <small class="text-muted" id="<?= $p ?>parent_noticeCount">0 / 2000</small></label>
         <textarea rows="3" maxlength="2000" name="<?= $p ?>parent_notice" id="<?= $p ?>parent_notice" class="form-control" placeholder="Notice visible on Parent App dashboard for students of this house..." oninput="updateNoticeCount(this)"></textarea>
@@ -170,6 +176,47 @@ function updateAllotmentHint(p) {
         `Automatically converted to Spacs Coins and credited to students of this house every ${day.toLowerCase()} at ${label} IST.`;
 }
 
+// weekly minutes as last saved, so "Allot now" never credits unsaved edits
+let savedWeeklyMins = null;
+
+async function allotNow() {
+    const id = document.getElementById('editid').value;
+    const video = document.getElementById('updateweekly_video_mins').value.trim() || '0';
+    const audio = document.getElementById('updateweekly_audio_mins').value.trim() || '0';
+    if (!savedWeeklyMins || String(savedWeeklyMins.video) !== video || String(savedWeeklyMins.audio) !== audio) {
+        Swal.fire('Save first', 'The weekly minutes were changed. Click Submit to save the house, then use Allot now.', 'info');
+        return;
+    }
+    if (Number(video) <= 0 && Number(audio) <= 0) {
+        Swal.fire('Nothing to allot', 'Set weekly video or audio minutes above 0 and save the house first.', 'info');
+        return;
+    }
+    const confirm = await Swal.fire({
+        title: 'Allot minutes now?',
+        text: `${video} video min and ${audio} audio min will be credited to every student of this house (and their parents) right now, in addition to the weekly schedule.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, allot now',
+        cancelButtonText: 'Cancel',
+    });
+    if (!confirm.isConfirmed && !confirm.value) return;
+
+    const btn = document.getElementById('allotNowBtn');
+    btn.disabled = true;
+    try {
+        const res = await fetch('<?= $path ?>/api/allot-now/' + id, {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + (window.NT_TOKEN || '') },
+        });
+        const data = await res.json();
+        Swal.fire(data.error ? 'error!' : 'success!', data.message, data.error ? 'error' : 'success');
+    } catch (e) {
+        Swal.fire('error!', 'Could not reach the server. Please try again.', 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
 function updateNoticeCount(el) {
     document.getElementById(el.id + 'Count').textContent = `${el.value.length} / 2000`;
 }
@@ -233,6 +280,7 @@ async function getUpdateValue(id) {
     document.getElementById("updateallotment_time").value = (house.allotment_time || '07:00').slice(0, 5);
     document.getElementById("updateweekly_video_mins").value = house.weekly_video_mins ?? 0;
     document.getElementById("updateweekly_audio_mins").value = house.weekly_audio_mins ?? 0;
+    savedWeeklyMins = { video: house.weekly_video_mins ?? 0, audio: house.weekly_audio_mins ?? 0 };
     ['parent_notice', 'student_notice'].forEach((field) => {
         const el = document.getElementById("update" + field);
         el.value = house[field] || '';

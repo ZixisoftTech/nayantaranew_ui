@@ -2717,7 +2717,8 @@ html.nt .nt-ov-status.is-none { background: var(--nt-warning-soft); color: var(-
 .nt-readonly .delete,
 .nt-readonly .nt-menu-item[onclick*="delete" i],
 .nt-readonly .nt-menu-item[onclick*="update" i],
-.nt-readonly .modal-footer [type="submit"] {
+.nt-readonly .modal-footer [type="submit"],
+.nt-readonly .nt-allot-now {
     display: none !important;
 }
 .nt-readonly td button[onclick*="status" i] {

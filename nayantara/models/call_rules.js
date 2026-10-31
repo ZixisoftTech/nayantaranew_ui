@@ -8,6 +8,7 @@
 const cron = require('node-cron');
 const dataBase = require('../config/db');
 const { ensureColumns } = require('./schema');
+const { requireManage } = require('./auth');
 
 const q = (sql, params) => new Promise((resolve, reject) => {
     dataBase.query(sql, params, (error, rows) => (error ? reject(error) : resolve(rows)));
@@ -26,6 +27,7 @@ dataBase.query(`CREATE TABLE IF NOT EXISTS tbl_allotment_log (
     seconds_each INT(11) NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 )`);
+ensureColumns('tbl_allotment_log', { source: "VARCHAR(10) NOT NULL DEFAULT 'auto'" }); // auto = weekly job, manual = "Allot now"
 
 const callType = (value) => (String(value || '').toLowerCase() === 'audio' ? 'audio' : 'video');
 
@@ -150,6 +152,23 @@ function nowIst() {
     return { day: DAYS[ist.getUTCDay()], date: iso.slice(0, 10), time: iso.slice(11, 19) };
 }
 
+/**
+ * Adds the house's weekly minutes, converted to coins, to every student in it and their parents.
+ * Returns { students, seconds } or null when the house has no weekly minutes.
+ */
+async function creditHouse(house, source) {
+    const coins = Number(house.weekly_video_mins) * Number(house.video_rate) + Number(house.weekly_audio_mins) * Number(house.audio_rate);
+    const seconds = Math.round(coins * 60);
+    if (!(seconds > 0)) return null;
+    const live = (await q("SHOW COLUMNS FROM tbl_student LIKE 'isdeleted'")).length ? ' AND isdeleted = 0' : '';
+    const students = await q(`UPDATE tbl_student SET total_talktime = total_talktime + ? WHERE department_id = ?${live}`, [seconds, house.id]);
+    await q(`UPDATE tbl_parents p JOIN tbl_student s ON s.id = p.student_id
+                SET p.total_talktime = p.total_talktime + ? WHERE s.department_id = ?${live.replace('isdeleted', 's.isdeleted')}`, [seconds, house.id]);
+    await q('INSERT INTO tbl_allotment_log (department_id, students, seconds_each, source) VALUES (?, ?, ?, ?)', [house.id, students.affectedRows, seconds, source]);
+    console.log(`${source === 'manual' ? 'Manual' : 'Weekly'} allotment: house ${house.id}, ${students.affectedRows} students, ${seconds}s each`);
+    return { students: students.affectedRows, seconds };
+}
+
 /*
  * Every minute: credit houses whose allotment day is today and whose time (IST) has passed,
  * once per day. last_allotment_at (IST) is claimed with a conditional UPDATE so two API
@@ -168,17 +187,36 @@ async function runAllotments() {
             'UPDATE tbl_department SET last_allotment_at = ? WHERE id = ? AND (last_allotment_at IS NULL OR last_allotment_at < ?)',
             [`${date} ${time}`, house.id, date]);
         if (!claimed.affectedRows) continue;
-        const coins = Number(house.weekly_video_mins) * Number(house.video_rate) + Number(house.weekly_audio_mins) * Number(house.audio_rate);
-        const seconds = Math.round(coins * 60);
-        if (!(seconds > 0)) continue;
-        const live = (await q("SHOW COLUMNS FROM tbl_student LIKE 'isdeleted'")).length ? ' AND isdeleted = 0' : '';
-        const students = await q(`UPDATE tbl_student SET total_talktime = total_talktime + ? WHERE department_id = ?${live}`, [seconds, house.id]);
-        await q(`UPDATE tbl_parents p JOIN tbl_student s ON s.id = p.student_id
-                    SET p.total_talktime = p.total_talktime + ? WHERE s.department_id = ?${live.replace('isdeleted', 's.isdeleted')}`, [seconds, house.id]);
-        await q('INSERT INTO tbl_allotment_log (department_id, students, seconds_each) VALUES (?, ?, ?)', [house.id, students.affectedRows, seconds]);
-        console.log(`Weekly allotment: house ${house.id}, ${students.affectedRows} students, ${seconds}s each`);
+        await creditHouse(house, 'auto');
     }
 }
+
+/**
+ * POST /api/allot-now/:id — credits one house's saved weekly minutes right away ("Allot now" on the
+ * Houses page). Super admin, or sub admin with manage access to Houses. The weekly schedule is unchanged.
+ */
+const allotNow = async (req, res) => {
+    try {
+        requireManage(req, 'manage_department.php');
+        const [house] = await q(
+            `SELECT d.id, d.status, d.weekly_video_mins, d.weekly_audio_mins, f.video_rate, f.audio_rate
+               FROM tbl_department d JOIN tbl_franchise f ON f.Id = d.franchise_id
+              WHERE d.id = ?`, [Number(req.params.id)]);
+        if (!house) return res.status(200).send({ error: true, message: 'House not found', data: null });
+        if (house.status != 1) return res.status(200).send({ error: true, message: 'This house is inactive. Activate it first.', data: null });
+        const result = await creditHouse(house, 'manual');
+        if (!result) return res.status(200).send({ error: true, message: 'Set weekly video or audio minutes above 0 and save the house first.', data: null });
+        return res.status(200).send({
+            error: false,
+            message: `${+(result.seconds / 60).toFixed(2)} Spacs Coins credited to each of ${result.students} students`,
+            data: result,
+        });
+    } catch (error) {
+        if (error.status) return res.status(error.status).send({ error: true, message: error.message, data: null });
+        console.log('Manual allotment failed', error.message);
+        return res.status(500).send({ error: true, message: 'Allot now api not working', data: null });
+    }
+};
 
 function startAllotmentJob() {
     cron.schedule('* * * * *', () => {
@@ -227,5 +265,5 @@ const deviceSettings = (req, res) => send(settingsFor(req, 'd.device_name = ?', 
 
 module.exports = {
     callType, callBlockReason, allowedCallSeconds, callCharge, rechargeBlockReason, activateParent,
-    startAllotmentJob, runAllotments, studentSettings, deviceSettings,
+    startAllotmentJob, runAllotments, allotNow, studentSettings, deviceSettings,
 };
